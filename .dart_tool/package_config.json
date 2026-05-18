@@ -1,0 +1,16 @@
+{
+  "configVersion": 2,
+  "packages": [
+    {
+      "name": "graphite",
+      "rootUri": "../",
+      "packageUri": "lib/",
+      "languageVersion": "3.11"
+    }
+  ],
+  "generator": "pub",
+  "generatorVersion": "3.11.4",
+  "flutterRoot": "file:///home/kel/development/flutter",
+  "flutterVersion": "3.41.6",
+  "pubCache": "file:///home/kel/.hermes/profiles/writer/home/.pub-cache"
+}

@@ -1,0 +1,76 @@
+# Standard Flutter ignore
+.flutter-plugins
+.pub-cache#
+.dart_tool#
+build/
+*.hprof
+
+# Code analysis
+dartpad/
+.flutter-plugins
+.dart_tool#
+.build/
+.packages
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local notes database (SQLite)
+data.db
+*.db-journal
+*.db-shm
+
+# Android
+.android/
+captures.txt
+keystore.properties
+local.properties
+network-debugging.txt
+.provision.properties
+*.jks
+*.keystore
+gradle-app.setting
+!gradle-wrapper.jar
+!gradlew
+!gradlew.bat
+!local.properties.backup
+.gradle/
+.cxx/
+.externalNativeBuild/
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/.last_build_id
+ios/Runner.xcworkspace/
+*.xcuserstate
+build/ios/Debug-iphonesimulator
+build/ios/Release-iphonesimulator
+build/ios/Debug-arm64
+build/ios/Release-arm64
+build/ios/Debug-iphoneos
+build/ios/Release-iphoneos
+DerivedData/
+*.hprof
+
+# Windows
+.vs/
+*.user
+*.suo
+*.userprefs
+*.lock
+*.cache
+**/*.exe
+**/*.dll
+
+# macOS
+.DS_Store
+*.dSYM
+*.xcuserstate
+build/Debug-iphonesimulator
+build/Release-iphoneos

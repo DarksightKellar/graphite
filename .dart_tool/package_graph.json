@@ -1,0 +1,14 @@
+{
+  "roots": [
+    "graphite"
+  ],
+  "packages": [
+    {
+      "name": "graphite",
+      "version": "1.0.0+1",
+      "dependencies": [],
+      "devDependencies": []
+    }
+  ],
+  "configVersion": 1
+}

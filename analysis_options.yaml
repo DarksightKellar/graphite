@@ -1,0 +1,10 @@
+# For more information about analysis_options, see the package page:
+# https://dart.dev/guides/language/analysis-options
+include: package:flutter_lints/flutter.yaml
+linter:
+  rules:
+    prefer_const_constructors: true
+    avoid_print: false # Allow debugging prints during development
+    require_trailing_commas: true
+    sort_child_properties_last: true
+    use_key_in_widget_constructors: true
