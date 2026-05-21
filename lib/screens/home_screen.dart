@@ -1,273 +1,940 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
-/// HomeScreen with quick note capture and cross-platform file picker.
+import 'package:flutter/material.dart';
+import '../data/database.dart';
+import '../data/file_picker.dart';
+import '../models/note.dart';
+import '../widgets/quick_capture_dialog.dart';
+
+/// Sort order for the note list.
+enum NoteSortOrder {
+  dateModified,
+  dateCreated,
+  titleAsc,
+  titleDesc,
+}
+
+/// Filter mode for the note list.
+enum NoteFilter {
+  allNotes,
+  byTag,
+  withLinks,
+}
+
+/// HomeScreen with quick note capture, file import, and tag navigation.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  /// Optional injected database for testing. When null, creates a real [GraphiteDB].
+  final GraphiteDB? db;
+
+  const HomeScreen({super.key, this.db});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String searchQuery = '';
+  String _searchQuery = '';
+  late final GraphiteDB _db;
+  final GraphiteFilePicker _filePicker = GraphiteFilePicker();
+  final TextEditingController _searchController = TextEditingController();
+
+  bool _isSearching = false;
+  List<Note> _displayedNotes = [];
+  bool _initialized = false;
+  String? _activeTagFilter;
+  int _filteredCount = 0;
+  Map<String, int> _linkCounts = {};
+  Timer? _debounceTimer;
+  bool _isQuickCaptureOpen = false;
+  NoteSortOrder _sortOrder = NoteSortOrder.dateModified;
+  NoteFilter _activeFilter = NoteFilter.allNotes;
+  final Set<String> _pinnedNoteIds = {};
+
+  // Selection mode
+  bool _selectionMode = false;
+  final Set<String> _selectedNoteIds = {};
+
+  void _enterSelectionMode(Note note) {
+    setState(() {
+      _selectionMode = true;
+      _selectedNoteIds.add(note.id);
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _selectionMode = false;
+      _selectedNoteIds.clear();
+    });
+  }
+
+  void _toggleSelection(Note note) {
+    setState(() {
+      if (_selectedNoteIds.contains(note.id)) {
+        _selectedNoteIds.remove(note.id);
+        if (_selectedNoteIds.isEmpty) {
+          _selectionMode = false;
+        }
+      } else {
+        _selectedNoteIds.add(note.id);
+      }
+    });
+  }
+
+  Future<void> _bulkDelete() async {
+    final count = _selectedNoteIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Notes'),
+        content: Text('Delete $count note${count == 1 ? '' : 's'}? '
+            'This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete',
+                style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        for (final id in _selectedNoteIds) {
+          await _db.deleteNote(id);
+        }
+        _exitSelectionMode();
+        _loadNotes();
+      } catch (e) {
+        debugPrint('Failed to bulk delete: $e');
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _db = widget.db ?? GraphiteDB();
+    _loadNotes();
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadNotes() async {
+    try {
+      await _db.initialize();
+      final notes = await _db.listNotes();
+      if (!mounted) return;
+      setState(() {
+        _displayedNotes = notes;
+        _applySort();
+        _initialized = true;
+      });
+      // Load link counts for badge display (non-fatal)
+      try {
+        final counts = <String, int>{};
+        for (final note in notes) {
+          final count = await _db.getLinkCount(note.id);
+          counts[note.id] = count;
+        }
+        if (!mounted) return;
+        setState(() {
+          _linkCounts = counts;
+        });
+      } catch (_) {
+        // Link counts are best-effort; don't block the note list.
+      }
+    } catch (e) {
+      debugPrint('Failed to load notes: $e');
+      if (!mounted) return;
+      setState(() => _initialized = true);
+    }
+  }
+
+  Future<void> _performSearch(String query) async {
+    _debounceTimer?.cancel();
+
+    setState(() {
+      _searchQuery = query;
+    });
+
+    if (query.isEmpty) {
+      _loadNotes();
+      return;
+    }
+
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      if (!mounted) return;
+      setState(() => _isSearching = true);
+
+      try {
+        final results = await _db.searchNotes(query);
+        if (!mounted) return;
+        setState(() {
+          _displayedNotes = results;
+          _isSearching = false;
+        });
+      } catch (e) {
+        debugPrint('Search failed: $e');
+        if (!mounted) return;
+        setState(() => _isSearching = false);
+      }
+    });
+  }
+
+  void _setSortOrder(NoteSortOrder order) {
+    if (_sortOrder == order) return;
+    setState(() {
+      _sortOrder = order;
+      _applySort();
+    });
+  }
+
+  void _applySort() {
+    final notes = List<Note>.from(_displayedNotes);
+
+    // Pinned notes always appear first
+    notes.sort((a, b) {
+      final aPinned = _pinnedNoteIds.contains(a.id);
+      final bPinned = _pinnedNoteIds.contains(b.id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+
+      switch (_sortOrder) {
+        case NoteSortOrder.dateModified:
+          return b.updatedAt.compareTo(a.updatedAt);
+        case NoteSortOrder.dateCreated:
+          return b.createdAt.compareTo(a.createdAt);
+        case NoteSortOrder.titleAsc:
+          return a.path.compareTo(b.path);
+        case NoteSortOrder.titleDesc:
+          return b.path.compareTo(a.path);
+      }
+    });
+
+    _displayedNotes = notes;
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+    });
+    _loadNotes();
+  }
+
+  Future<void> _setFilter(NoteFilter filter) async {
+    if (filter == _activeFilter) return;
+    setState(() => _activeFilter = filter);
+
+    switch (filter) {
+      case NoteFilter.allNotes:
+        _activeTagFilter = null;
+        await _loadNotes();
+      case NoteFilter.byTag:
+        await _navigateToTags();
+      case NoteFilter.withLinks:
+        await _loadNotesWithLinks();
+    }
+  }
+
+  Future<void> _loadNotesWithLinks() async {
+    try {
+      await _db.initialize();
+      final notes = await _db.getNotesWithLinks();
+      if (!mounted) return;
+      setState(() {
+        _activeTagFilter = null;
+        _displayedNotes = notes;
+        _applySort();
+      });
+    } catch (e) {
+      debugPrint('Failed to load notes with links: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Graphite'),
-        backgroundColor: Colors.transparent,
+        title: _selectionMode
+            ? Text('${_selectedNoteIds.length} selected')
+            : const Text('Graphite'),
+        backgroundColor: const Color(0xFF2D3436),
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => _showSearchDialog(),
+        leading: _selectionMode
+            ? IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _exitSelectionMode,
+              )
+            : null,
+        actions: _selectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Delete selected',
+                  onPressed: _bulkDelete,
+                ),
+              ]
+            : [
+                PopupMenuButton<NoteSortOrder>(
+                  icon: const Icon(Icons.sort),
+            tooltip: 'Sort notes',
+            onSelected: _setSortOrder,
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: NoteSortOrder.dateModified,
+                child: Text('Date Modified'),
+              ),
+              const PopupMenuItem(
+                value: NoteSortOrder.dateCreated,
+                child: Text('Date Created'),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: NoteSortOrder.titleAsc,
+                child: Text('Title A-Z'),
+              ),
+              const PopupMenuItem(
+                value: NoteSortOrder.titleDesc,
+                child: Text('Title Z-A'),
+              ),
+            ],
           ),
-
-          // Quick note capture button (+)
+          PopupMenuButton<NoteFilter>(
+            icon: const Icon(Icons.filter_list),
+            tooltip: 'Filter notes',
+            onSelected: _setFilter,
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: NoteFilter.allNotes,
+                child: Text('All Notes'),
+              ),
+              const PopupMenuItem(
+                value: NoteFilter.byTag,
+                child: Text('By Tag'),
+              ),
+              const PopupMenuItem(
+                value: NoteFilter.withLinks,
+                child: Text('With Links'),
+              ),
+            ],
+          ),
           PopupMenuButton<String>(
-            onSelected: (action) => _handleQuickNoteAction(action),
+            onSelected: _handleQuickNoteAction,
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'new_note', child: Text('New Note')),
-              const PopupMenuItem(value: 'duplicate_latest', child: Row(
-                children: [Icon(Icons.copy, size: 16), SizedBox(width: 8), Text('Duplicate Latest')],
-              ), onTap: () => _openLatestNote()),
-              PopupMenuDivider(),
-              // Cross-platform file picker (import any markdown file from device)
-              const PopupMenuItem(value: 'open_file', child: Row(
-                children: [Icon(Icons.folder_open, size: 16), SizedBox(width: 8), Text('Import File')],
-              ), onTap: () => _showFilePicker()),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'tags',
+                child: Row(
+                  children: [
+                    Icon(Icons.tag, size: 16),
+                    SizedBox(width: 8),
+                    Text('Browse Tags'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'open_file',
+                child: Row(
+                  children: [
+                    Icon(Icons.folder_open, size: 16),
+                    SizedBox(width: 8),
+                    Text('Import File'),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
       ),
       body: Column(
         children: [
-          // Search bar
           _buildSearchBar(),
-
-          // Folder navigation (breadcrumbs)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Home', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                IconButton(
-                  icon: Icon(Icons.folder_open, size: 20, color: Colors.grey[500]),
-                  onPressed: () => _showFolderPicker(), // TODO
-                ),
+                Text(_searchQuery.isEmpty ? 'Home' : 'Search Results',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 14)),
               ],
             ),
           ),
-
-          // Note list (file tree view)
           Expanded(child: _buildNoteList()),
+          if (_activeTagFilter != null) _buildTagFilterBanner(),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showQuickCapture,
+        tooltip: 'Quick capture',
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      color: const Color(0xFFD6DBDF),
+      child: Row(
+        children: [
+          Icon(Icons.search, size: 20, color: Colors.grey[700]),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Search notes...',
+                border: InputBorder.none,
+              ),
+              onChanged: _performSearch,
+              maxLines: 1,
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.clear, size: 18),
+              onPressed: _clearSearch,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
         ],
       ),
     );
   }
-}
 
-Widget _buildSearchBar() {
-  return Container(
-    padding: const EdgeInsets.all(8),
-    color: const Color(0xFFD6DBDF),
-    child: Row(
+  Widget _buildNoteList() {
+    if (!_initialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
       children: [
-        Icon(Icons.search, size: 20, color: Colors.grey[700]),
-        const SizedBox(width: 8),
-        Expanded(child: TextField(
-          decoration: InputDecoration(
-            hintText: 'Search notes...',
-            border: InputBorder.none,
-          ),
-          onChanged: (value) => setState(() => searchQuery = value),
-          maxLines: 1,
-          onSubmitted: (_) => _searchNotes(),
-        )),
-      ],
-    ),
-  );
-}
-
-Widget _buildNoteList() {
-  return Column(
-    children: [
-      // Section header
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-        child: Row(
-          children: [
-            Container(width: 4, height: 20, decoration: BoxDecoration(color: Colors.blueGrey[300], borderRadius: BorderRadius.circular(2))),
-            const SizedBox(width: 8),
-            Text('My Notes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          ],
-        ),
-      ),
-
-      // Note cards (placeholders for demo)
-      _buildPlaceholderNotes(),
-    ],
-  );
-}
-
-Widget _buildPlaceholderNotes() {
-  return ListView.separated(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    itemCount: 5,
-    separatorBuilder: (_, __) => const SizedBox(height: 4),
-    itemBuilder: (context, index) {
-      final isWelcome = index == 0;
-      return _buildNoteCard(isWelcome);
-    },
-  );
-}
-
-Widget _buildNoteCard(bool isWelcome) {
-  final title = isWelcome ? 'Getting Started with Graphite' : 'Project Ideas';
-  final subtitle = isWelcome 
-      ? 'This is your local-first knowledge base. Notes are stored securely on this device.'
-      : 'A collection of creative concepts for future apps and projects';
-  final tags = isWelcome
-    ? ['getting-started', 'tutorial']
-    : ['ideas', 'work'];
-
-  return Card(
-    elevation: 0,
-    child: InkWell(
-      onTap: () => _openNote(isWelcome),
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 36, height: 36,
-                  decoration: BoxDecoration(
-                    color: isWelcome ? Colors.blueGrey[50] : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(isWelcome ? Icons.school_outlined : Icons.lightbulb_outline, 
-                    color: isWelcome ? Colors.blueGrey[400] : Colors.grey[500]),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: Colors.blueGrey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                const SizedBox(width: 12),
-                Expanded(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15), maxLines: 1),
-                    const SizedBox(height: 4),
-                    Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[600], height: 1.3), maxLines: 2),
-                  ],
-                )),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              const Text('My Notes',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            ],
+          ),
+        ),
+        Expanded(child: _buildNotesList()),
+      ],
+    );
+  }
 
+  Widget _buildNotesList() {
+    if (_isSearching) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_displayedNotes.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.note_add_outlined, size: 48, color: Colors.grey[400]),
             const SizedBox(height: 8),
-
-            Row(
-              children: [
-                Expanded(child: Row(
-                  children: [Icon(Icons.access_time, size: 14, color: Colors.grey[500]), const SizedBox(width: 6)],
-                )),
-                if (tags.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Expanded(child: Wrap(spacing: 4, runSpacing: 4,
-                    children: tags.map((tag) => Chip(
-                      label: Text('#$tag', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
-                      smallPadding: EdgeInsets.zero,
-                    )).toList(),
-                  ))],
-              ],
+            Text(
+              _searchQuery.isEmpty ? 'No notes yet. Tap + to create your first note.' : 'No notes matching "$_searchQuery"',
+              style: TextStyle(color: Colors.grey[500]),
             ),
           ],
         ),
-      ),
-    ),
-  );
-}
+      );
+    }
 
-/// Quick note capture dialog (single-line thought + full editor)
-Future<void> _handleQuickNoteAction(String action) async {
-  if (action == 'new_note') {
-    // Show quick dialog to capture a single-line thought, then open full editor
-    final title = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Quick Note'),
-        content: TextField(
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Type your note...',
-            border: OutlineInputBorder(),
+    return RefreshIndicator(
+      onRefresh: _loadNotes,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _displayedNotes.length,
+        itemBuilder: (context, index) {
+          final note = _displayedNotes[index];
+          final isPinned = _pinnedNoteIds.contains(note.id);
+          return Dismissible(
+            key: Key('note_${note.id}'),
+            direction: DismissDirection.horizontal,
+            confirmDismiss: (direction) async {
+              if (direction == DismissDirection.startToEnd) {
+                // Swipe right → pin
+                setState(() {
+                  if (_pinnedNoteIds.contains(note.id)) {
+                    _pinnedNoteIds.remove(note.id);
+                  } else {
+                    _pinnedNoteIds.add(note.id);
+                  }
+                  _applySort();
+                });
+                return false; // Don't dismiss, just pin
+              } else {
+                // Swipe left → delete with confirmation
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Delete Note'),
+                    content: Text('Delete "${note.path}"? '
+                        'This cannot be undone.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Delete',
+                            style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed == true) {
+                  try {
+                    await _db.deleteNote(note.id);
+                    _loadNotes();
+                  } catch (e) {
+                    debugPrint('Failed to delete note: $e');
+                  }
+                }
+                return false; // Handle deletion manually
+              }
+            },
+            background: Container(
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.only(left: 20),
+              color: Colors.green,
+              child: const Icon(Icons.push_pin, color: Colors.white),
+            ),
+            secondaryBackground: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              color: Colors.red,
+              child: const Icon(Icons.delete, color: Colors.white),
+            ),
+            child: _buildNoteCard(note, isPinned: isPinned),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildNoteCard(Note note, {bool isPinned = false}) {
+    // Extract title from first heading or first line of content
+    final lines = note.content.split('\n');
+    String title = note.path;
+    String subtitle = '';
+    if (lines.isNotEmpty) {
+      final first = lines.first.trim();
+      if (first.startsWith('# ')) {
+        title = first.substring(2);
+        // Find first non-empty line after the heading for subtitle
+        for (var i = 1; i < lines.length; i++) {
+          final candidate = lines[i].trim();
+          if (candidate.isNotEmpty) {
+            subtitle = candidate;
+            break;
+          }
+        }
+      } else if (first.startsWith('## ')) {
+        title = first.substring(3);
+        subtitle = '';
+      } else {
+        title = first.length > 60 ? '${first.substring(0, 57)}...' : first;
+        subtitle = '';
+      }
+    }
+
+    return Card(
+      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 4),
+      color: _selectionMode && _selectedNoteIds.contains(note.id)
+          ? Colors.blue.withValues(alpha: 0.1)
+          : null,
+      child: InkWell(
+        onTap: () => _selectionMode
+            ? _toggleSelection(note)
+            : _openNote(note),
+        onLongPress: () => _selectionMode
+            ? null
+            : _enterSelectionMode(note),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey[50],
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(Icons.description_outlined,
+                        color: Colors.blueGrey[400]),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Expanded(
+                            child: Text(title,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 15),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                          ),
+                          if (isPinned)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 4),
+                              child: Icon(Icons.push_pin,
+                                  size: 14, color: Colors.orange),
+                            ),
+                        ]),
+                        if (subtitle.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(subtitle,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                  height: 1.3),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
+                  const SizedBox(width: 4),
+                  Text(_formatDate(note.updatedAt),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                ],
+              ),
+              if (note.tags.isNotEmpty || (_linkCounts[note.id] ?? 0) > 0) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 2,
+                  children: [
+                    // "N links" badge
+                    if ((_linkCounts[note.id] ?? 0) > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          '${_linkCounts[note.id]} link${(_linkCounts[note.id] ?? 0) == 1 ? '' : 's'}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ...note.tags
+                        .map((tag) => Chip(
+                              label: Text(tag,
+                                  style: const TextStyle(fontSize: 10)),
+                              padding: EdgeInsets.zero,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            ))
+                        .toList(),
+                  ],
+                ),
+              ],
+            ],
           ),
-          maxLines: 3,
-          onSubmitted: (value) {
-            Navigator.pop(context, value);
-          },
         ),
       ),
     );
+  }
 
-    if (title != null && title.trim().isNotEmpty) {
-      // Create a new note with this text as the initial content
-      final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
-      await createNote('Quick Note $timestamp.md', '# $title\n\n$noteContent');
-      
-      // TODO: navigate to editor screen for the new note
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Quick note captured')),
+  Future<void> _handleQuickNoteAction(String action) async {
+    if (action == 'new_note') {
+      final title = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Quick Note'),
+          content: TextField(
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Type your note...',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+            onSubmitted: (value) {
+              Navigator.pop(context, value);
+            },
+          ),
+        ),
       );
+
+      if (title != null && title.trim().isNotEmpty) {
+        final now = DateTime.now();
+        final note = Note(
+          id: '', // assigned by database
+          path: 'Quick Note ${now.millisecondsSinceEpoch}',
+          filePath: '',
+          createdAt: now,
+          updatedAt: now,
+          content: '# $title\n\nQuick note captured at $now.',
+          tags: const [],
+        );
+
+        try {
+          final created = await _db.createNote(note);
+          if (!mounted) return;
+          Navigator.pushNamed(context, '/editor/${created.id}');
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Note created'),
+              duration: Duration(seconds: 1),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } catch (e) {
+          debugPrint('Failed to create quick note: $e');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to save note')),
+          );
+        }
+      }
+    } else if (action == 'tags') {
+      _navigateToTags();
+    } else if (action == 'open_file') {
+      _showFilePicker();
     }
-  } else if (action == 'duplicate_latest') {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Duplicate latest note coming in next update')),
+  }
+
+  Future<void> _showFilePicker() async {
+    final file = await _filePicker.pickMarkdownFile();
+
+    if (file != null) {
+      try {
+        final fileContent = await file.readAsString();
+        debugPrint('Imported file: ${file.path}');
+
+        final now = DateTime.now();
+        String displayName = file.path.split('/').last;
+        if (displayName.endsWith('.md')) {
+          displayName = displayName.substring(0, displayName.length - 3);
+        }
+
+        final note = Note(
+          id: '', // assigned by database
+          path: 'Imported ${displayName}',
+          filePath: file.path,
+          createdAt: now,
+          updatedAt: now,
+          content: '# $displayName\n\n> Imported from: ${file.path}\n> Imported at: $now\n\n$fileContent',
+          tags: const [],
+        );
+
+        final created = await _db.createNote(note);
+
+        if (!mounted) return;
+        Navigator.pushNamed(context, '/editor/${created.id}');
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Note imported successfully'),
+            duration: Duration(seconds: 1),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        debugPrint('Failed to read/import file: $e');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to import file')),
+        );
+      }
+    }
+  }
+
+  Future<void> _navigateToTags() async {
+    final tag = await Navigator.pushNamed(context, '/tags');
+    if (tag != null && tag is String && mounted) {
+      filterByTag(tag);
+    }
+  }
+
+  void _openNote(Note note) {
+    if (note.id.isNotEmpty) {
+      Navigator.pushNamed(context, '/editor/${note.id}');
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dateDay = DateTime(date.year, date.month, date.day);
+    final diff = today.difference(dateDay).inDays;
+
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    final monthStr = months[date.month - 1];
+
+    if (date.year == now.year) {
+      return '$monthStr ${date.day}';
+    }
+    return '$monthStr ${date.day}, ${date.year}';
+  }
+
+  Widget _buildTagFilterBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.blueGrey[50],
+      child: Row(
+        children: [
+          const Icon(Icons.filter_alt, size: 16, color: Colors.blueGrey),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Filtered by $_activeTagFilter ($_filteredCount note${_filteredCount == 1 ? '' : 's'})',
+              style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.blueGrey[700],
+                  fontWeight: FontWeight.w500),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: clearTagFilter,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
     );
-  } else if (action == 'open_file') {
-    _showFilePicker();
   }
-}
 
-/// Cross-platform file picker (import any markdown file from device)
-void _showFilePicker() async {
-  final file = await FilePicker.platform.pickFiles(
-    type: FileType.any,
-    allowedExtensions: ['md'],
-    allowMultiple: false,
-  );
+  void clearTagFilter() {
+    setState(() {
+      _activeTagFilter = null;
+      _filteredCount = 0;
+    });
+    _loadNotes();
+  }
 
-  if (file != null && file.files.isNotEmpty) {
-    final filePath = file.files.first.path;
-    
+  /// Filter the note list to only show notes with [tag].
+  Future<void> filterByTag(String tag) async {
     try {
-      // Read the imported markdown content
-      final content = await File(filePath).readAsString();
-
-      // TODO: Create a new note with this content and open editor
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Imported "${file.files.first.name}" from $filePath')),
-      );
+      final notes = await _db.getNotesByTag(tag);
+      if (!mounted) return;
+      setState(() {
+        _activeTagFilter = tag;
+        _displayedNotes = notes;
+        _filteredCount = notes.length;
+        _searchQuery = '';
+      });
     } catch (e) {
-      debugPrint('Failed to read imported file: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to open imported file')),
-      );
+      debugPrint('Failed to filter by tag: $e');
     }
   }
+
+  void _showQuickCapture() {
+    // Debounce: prevent opening multiple sheets simultaneously
+    if (_isQuickCaptureOpen) return;
+    _isQuickCaptureOpen = true;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => FadeTransition(
+        opacity: CurvedAnimation(
+          parent: ModalRoute.of(context)!.animation!,
+          curve: Curves.easeIn,
+        ),
+        child: QuickCaptureDialog(
+            onSave: (title, content, tags) async {
+              _isQuickCaptureOpen = false;
+              Navigator.pop(context); // close bottom sheet
+
+              final now = DateTime.now();
+              final effectiveTitle = title.trim().isEmpty
+                  ? 'Untitled ${now.millisecondsSinceEpoch}'
+                  : title.trim();
+
+              final noteContent = content.trim().isEmpty
+                  ? '# $effectiveTitle'
+                  : '# $effectiveTitle\n\n$content';
+
+              final note = Note(
+                id: '',
+                path: effectiveTitle,
+                filePath: '',
+                createdAt: now,
+                updatedAt: now,
+                content: noteContent,
+                tags: tags,
+              );
+
+              try {
+                await _db.createNote(note);
+                if (!mounted) return;
+                _loadNotes(); // refresh list with new note at top
+              } catch (e) {
+                debugPrint('Quick capture save failed: $e');
+                if (!mounted) return;
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(content: Text('Failed to save note')),
+                );
+              }
+            },
+            onCancel: () {
+              _isQuickCaptureOpen = false;
+            },
+          ),
+        ),
+    ).whenComplete(() {
+      _isQuickCaptureOpen = false;
+    });
+  }
 }
-
-void _openLatestNote() => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Duplicate latest note coming in next update')));
-void _searchNotes() => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Search implemented with SQLite')));
-void _showSearchDialog() => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Use search bar above to search')));
-
-void _openNote(bool isWelcome) {
-  // TODO: create a new note called "Getting Started" and open it
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Opening note...')),
-  );
-}
-
-void _showFolderPicker() => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Browse folders coming in next update')));

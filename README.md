@@ -62,6 +62,28 @@ lib/
 - **Local-first** — all data lives on device, no cloud dependency
 - **Flutter-native** — single codebase for iOS, Android, macOS, Windows
 
+## Offline-First Design
+
+Graphite is designed to work **fully offline** — no network connection is ever required.
+
+**Guarantees:**
+- All CRUD operations (create, read, update, delete) work in airplane mode
+- SQLite database is created and migrated entirely locally via FFI backend
+- No `http`, `dio`, `cloud_firestore`, or any network-dependent package in `pubspec.yaml`
+- Zero network calls in any Dart import across the entire codebase
+- File system vault is created and managed locally via `path_provider`
+
+**Verification:**
+- `test/offline_integration_test.dart` — canonical integration test proving the full note
+  lifecycle (create → read → update → search → tag-filter → link navigation → delete)
+  works without network, using the FFI-backed SQLite database factory
+
+**Audit results (Phase 2.4):**
+- ✅ 0 network-requiring Dart imports found
+- ✅ 0 cloud/HTTP dependencies in pubspec.yaml
+- ✅ 8/8 offline integration tests pass
+- ✅ Full CRUD + search + tags + links verified offline
+
 ## Next Steps (Post-MVP)
 - [ ] Cross-platform file picker (open files outside app vault)
 - [ ] Undo/redo system with conflict resolution

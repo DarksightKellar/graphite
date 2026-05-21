@@ -1,12 +1,14 @@
-import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../screens/home_screen.dart';
+import '../screens/editor_screen.dart';
+import '../screens/tag_browser_screen.dart';
 
 /// Router configuration for Graphite app.
-goRouter appRouter = GoRouter(
+final appRouter = GoRouter(
   initialLocation: '/',
   redirect: (_, state) => '/',
   routes: [
-    // App-level screens (ordered by specificity)
-    GoRoute(path: '/', builder: (_) => const HomeScreen()),
+    GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
 
     GoRoute(
       path: '/editor/:id',
@@ -16,8 +18,6 @@ goRouter appRouter = GoRouter(
       },
     ),
 
-    GoRoute(path: '/graph', builder: (_) => const GraphScreen()),
-
-    GoRoute(path: '/tags', builder: (_) => const TagBrowserScreen()),
+    GoRoute(path: '/tags', builder: (_, __) => const TagBrowserScreen()),
   ],
 );

@@ -1,99 +1,81 @@
 import 'dart:io';
-import '../models/note.dart';
-import '../data/file_repository.dart';
-import '../utils/markdown_parser.dart';
 
-/// The central business logic for note CRUD operations.
+import '../data/database.dart';
+import '../data/file_repository.dart';
+import '../models/note.dart';
+
+/// Coordinates between SQLite persistence (primary) and file system
+/// (backup/export).
+///
+/// All reads go through the database. Writes go to the database first,
+/// then to the file system for backup/export.
 class NoteRepository {
+  final GraphiteDB _db;
   final FileRepository _fileSystem;
 
-  NoteRepository(this._fileSystem);
+  NoteRepository(this._db, this._fileSystem);
 
-  /// Creates a new note file and returns its absolute path.
-  Future<String> createNote(String relativePath, String content) async {
-    // Generate unique ID from filename hash
-    final id = _hashFilename(relativePath);
-    
-    await _fileSystem.writeNote(
-      relativePath,
-      content,
-    );
+  // ── CRUD ────────────────────────────────────────────────────────────
 
-    return '$relativePath#$id';
+  /// Insert a new note. Persists to DB, then writes the markdown file.
+  Future<Note> createNote(Note note) async {
+    final saved = await _db.createNote(note);
+
+    try {
+      await _fileSystem.writeNote(saved.path, saved.content);
+    } catch (e) {
+      // File write is best-effort backup; don't fail the operation.
+    }
+
+    return saved;
   }
 
-  /// Reads a note and returns its absolute path + parsed metadata.
-  Future<({String id, String path, String filePath, DateTime createdAt, 
-      DateTime updatedAt, NoteData parsed})> readNote(String relativePath) async {
-    final fullpath = _fileSystem.getNotePath(relativePath);
-    if (!await File(fullpath).exists()) throw FileSystemException('not found');
-
-    final fileStat = await File(fullpath).stat();
-    
-    return (
-      id: relativePath.hashCode.toString(),
-      path: relativePath,
-      filePath: fullpath,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(fileStat.birthTime),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(fileStat.modified),
-      parsed: MarkdownParser.parseMarkdown(relativePath, await _fileSystem.readNote(relativePath)),
-    );
+  /// Read a note by its id. Returns `null` if not found.
+  Future<Note?> readNote(String id) async {
+    return _db.readNote(id);
   }
 
-  /// Updates an existing note's content.
-  Future<void> updateNote(String relativePath, String newContent) async {
-    // Write the file first
-    final fullpath = _fileSystem.getNotePath(relativePath);
-    final dir = File(fullpath).parent;
-    if (!await dir.exists()) await dir.create(recursive: true);
-    await File(fullpath).writeAsString(newContent);
+  /// Update an existing note's content and metadata.
+  Future<void> updateNote(Note note) async {
+    await _db.updateNote(note);
 
-    // Now parse and extract new metadata
-    final parsed = MarkdownParser.parseMarkdown(
-      relativePath, 
-      await _fileSystem.readNote(relativePath)
-    );
+    try {
+      await _fileSystem.writeNote(note.path, note.content);
+    } catch (e) {
+      // File write is best-effort.
+    }
   }
 
-  /// Deletes a note file from disk.
-  Future<void> deleteNote(String relativePath) async {
-    await File(_fileSystem.getNotePath(relativePath)).delete();
+  /// Delete a note by id. Removes from DB and file system.
+  Future<void> deleteNote(String id) async {
+    final note = await _db.readNote(id);
+    await _db.deleteNote(id);
+
+    if (note != null) {
+      try {
+        final filePath = _fileSystem.getNotePath(note.path);
+        final file = File(filePath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e) {
+        // File deletion is best-effort.
+      }
+    }
   }
 
-  /// Lists all notes with their basic metadata.
+  /// List all notes, newest first.
   Future<List<Note>> listAllNotes() async {
-    final paths = await _fileSystem.listAllNotes();
-    return Future.wait(
-      paths.map((path) => readNote(path).then((data) => Note(
-        id: data.id,
-        path: data.path,
-        filePath: data.filePath,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-        content: '', // Content loaded lazily if needed
-        tags: [], // Parse on-demand or in background
-      ))
-    ).then((notes) => notes);
+    return _db.listNotes();
+  }
+
+  /// Search notes by content or path using LIKE pattern matching.
+  Future<List<Note>> searchNotes(String query) async {
+    return _db.searchNotes(query);
   }
 
   /// Returns a note's relative path without the .md extension.
   String getRelativePath(String absolutePath) {
     return _fileSystem.getRelativePath(absolutePath);
-  }
-}
-
-/// Helper: hash a filename string into a short ID (first 8 chars of SHA-256)
-String _hashFilename(String path) {
-  final bytes = utf8.encode(path);
-  final hash = <int>{};
-  for (var i = 0; i < bytes.length; i += 4) {
-    final chunk = bytes.sublist(i, i + 4);
-    final combined = hash.fold(0, (acc, val) => acc ^ val);
-    // Simple rolling hash
-    int h = 5381;
-    for (final b in chunk) {
-      h = ((h * 33) ^ b) & 0xFFFFFFFF;
-    }
-    return '${h.toRadixString(16).substring(0, 8)}';
   }
 }
