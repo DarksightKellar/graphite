@@ -89,9 +89,10 @@ Graphite is designed to work **fully offline** — no network connection is ever
 ## Next Steps (Post-MVP)
 - [ ] Cross-platform file picker (open files outside app vault)
 - [ ] Undo/redo system with conflict resolution
+- [ ] Interactive graph view with node/edge navigation
 - [ ] Advanced graph filters (show only recent links, hide dead ends)
 - [ ] Full syntax highlighting in editor pane
-- [ ] Dark mode theme
+- [x] Dark mode theme
 - [ ] Template library
 
 ## Technical Debt Tracker

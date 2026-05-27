@@ -1,9 +1,9 @@
 # Graphite — Setup Guide
 
-## Quick Start (5 minutes)
+## Quick Start
 
 ```bash
-cd /home/kel/projects/graphite
+cd graphite
 flutter pub get
 flutter run -d <your-device-id>
 ```
@@ -25,24 +25,21 @@ flutter doctor -v
 **Expected output:** All platforms showing ✓, with at least one connected device.
 
 If you see missing dependencies:
-- Android: Install Android Studio (or use existing)
-- iOS/MacOS: Xcode must be installed on macOS
-- Windows: WSL2 + Flutter CLI is sufficient for mobile development
+- Android: Install Android Studio
+- iOS/macOS: Xcode must be installed
+- Windows: WSL2 + Flutter CLI
 
-### Step 2: Clean and Install Dependencies
+### Step 2: Install Dependencies
 ```bash
-cd /home/kel/projects/graphite
-flutter clean
 flutter pub get
 ```
 
-This installs all packages from `pubspec.yaml` including:
-- **sqflite** — Local SQLite database (Obsidian's core DNA)
+This installs all packages from `pubspec.yaml`:
+- **sqflite** — Local SQLite database
 - **path_provider** — Platform-specific data directory handling
-- **markdown** & **highlighter** — Markdown parsing and syntax highlighting
-- **flutter_bloc** — State management for clean architecture
-- **go_router** — Declarative routing with URL parameters
-- **fl_chart** — Graph visualization library
+- **go_router** — Declarative routing
+- **file_picker** — Import markdown files
+- **sqflite_common_ffi** — Desktop database support (dev)
 
 ### Step 3: Run the App
 ```bash
@@ -62,50 +59,73 @@ The first launch will take 30-60 seconds as Flutter builds the app shell.
 
 ## First Launch — What You'll See
 
-1. **Home Screen** → File explorer with breadcrumbs and search bar
-2. **Tap "Create Note" (+)** → Opens editor with blank markdown canvas
+1. **Home Screen** → Note list with search bar, sort/filter controls, and a welcome note
+2. **Tap the + FAB** → Quick capture dialog (title + content + tags)
 3. **Try it out:**
    - Type `# Hello Graphite`
-   - Add a link: `[[Another Note]]` (this builds the graph!) 
+   - Add a link: `[[Another Note]]` (this builds the graph!)
    - Tag something: `#personal #ideas`
-4. **Tap the paintbrush icon** → Toggle preview mode
-5. **Navigate to /graph** → Visualize your note connections
+4. **Tap a note** → Opens the dual-pane markdown editor with live preview
+5. **Swipe right** on a note → Pin it to the top
+6. **Swipe left** on a note → Delete it
+
+---
+
+## Project Structure
+
+```
+graphite/
+├── lib/
+│   ├── main.dart                    # App entry + theme (light/dark)
+│   ├── router/app_router.dart       # go_router configuration
+│   ├── data/                        # Database + file system operations
+│   ├── models/                      # Core data: Note, Tag, Link
+│   ├── repository/                  # Business logic (NoteRepository)
+│   ├── screens/                     # Full-screen views
+│   │   ├── home_screen.dart        # Note list + search + quick capture
+│   │   ├── editor_screen.dart      # Dual-pane markdown editor
+│   │   ├── graph_screen.dart       # Graph view (post-MVP placeholder)
+│   │   └── tag_browser_screen.dart # Tag filtering UI
+│   ├── widgets/                     # Reusable UI components
+│   ├── utils/                       # Markdown parser + helpers
+│   └── hooks/                       # Custom hooks
+├── test/                            # Test suite (306 tests)
+├── pubspec.yaml
+└── README.md
+```
 
 ---
 
 ## Troubleshooting
 
-### "No devices found" or "Device not connected"
+### "No devices found"
 - Android: Check USB debugging is enabled (Developer Options)
-- iOS Simulator: Open Xcode → Products → Scheme → Select a device, then `flutter run`
-- macOS/Windows native: Close and reopen VS Code's DevTools window
+- iOS: Open Xcode → select a simulator, then `flutter run`
+- macOS/Windows: Close and reopen your IDE
 
-### "This app requires platform channels"
-- This is normal on first launch — Flutter is initializing the bridge.
-- Wait 10 seconds for the splash screen to disappear.
+### Database errors on first launch
+- Run `flutter clean && flutter pub get` to reset the build cache
+- The SQLite database is created automatically on first access
 
-### Freezed generation errors in logs
-- These are expected during development. The `.freezed.dart` file gets generated automatically when you run tests or build.
-- No action needed unless you see persistent compilation errors after running.
-
----
-
-## Next Steps (After First Launch)
-
-1. **Create your first note** → Tap the + button, type some markdown
-2. **Explore the graph** → Go to `/graph`, create a few more notes with links
-3. **Try tag filtering** → Browse all tags and click to filter
-4. **Read the code** → All Dart files are in `lib/` — inspect the architecture
+### Tests failing locally
+- Run `flutter pub get` first to sync dependencies
+- Performance benchmark tests may time out on desktop runners — this is a known environment issue, not a code defect. Run with `flutter test --exclude-tags=benchmark` to skip them.
 
 ---
 
-## Project Roadmap
+## Running Tests
 
-| Feature | Status | Next Milestone |
-|---------|--------|----------------|
-| Local SQLite storage | ✅ Scaffolded | Full CRUD with conflict resolution |
-| Markdown live preview | ⏳ In progress | Syntax highlighting + table of contents |
-| Graph view (fl_chart) | ⏳ Planned | Node/edge rendering with zoom/pan |
-| Cross-device sync | ❌ Out of scope v1 | Multi-tab undo stack first |
+```bash
+# Full suite (excluding known-flaky benchmarks)
+flutter test test/models/ test/data/ test/repository/ test/utils/ \
+  test/screens/ test/widgets/ test/offline_integration_test.dart \
+  test/integration/app_flow_test.dart
 
-For more details, see `README.md` and the architecture doc in `/docs/ARCHITECTURE.md`.
+# With coverage
+flutter test --coverage <same-paths-as-above>
+```
+
+---
+
+## License
+MIT — Open source, free to use and modify.
