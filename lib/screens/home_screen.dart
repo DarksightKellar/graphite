@@ -96,8 +96,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete',
-                style: TextStyle(color: Colors.red)),
+            child: Text('Delete',
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         ],
       ),
@@ -270,8 +270,8 @@ class _HomeScreenState extends State<HomeScreen> {
         title: _selectionMode
             ? Text('${_selectedNoteIds.length} selected')
             : const Text('Graphite'),
-        backgroundColor: const Color(0xFF2D3436),
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onSurface,
         leading: _selectionMode
             ? IconButton(
                 icon: const Icon(Icons.close),
@@ -369,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(_searchQuery.isEmpty ? 'Home' : 'Search Results',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14)),
               ],
             ),
           ),
@@ -388,10 +388,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSearchBar() {
     return Container(
       padding: const EdgeInsets.all(8),
-      color: const Color(0xFFD6DBDF),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Row(
         children: [
-          Icon(Icons.search, size: 20, color: Colors.grey[700]),
+          Icon(Icons.search, size: 20, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87)),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
@@ -431,7 +431,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 4,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: Colors.blueGrey[300],
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -456,11 +456,11 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.note_add_outlined, size: 48, color: Colors.grey[400]),
+            Icon(Icons.note_add_outlined, size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38)),
             const SizedBox(height: 8),
             Text(
               _searchQuery.isEmpty ? 'No notes yet. Tap + to create your first note.' : 'No notes matching "$_searchQuery"',
-              style: TextStyle(color: Colors.grey[500]),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
             ),
           ],
         ),
@@ -505,8 +505,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Delete',
-                            style: TextStyle(color: Colors.red)),
+                        child: Text('Delete',
+                            style: TextStyle(color: Theme.of(context).colorScheme.error)),
                       ),
                     ],
                   ),
@@ -525,14 +525,14 @@ class _HomeScreenState extends State<HomeScreen> {
             background: Container(
               alignment: Alignment.centerLeft,
               padding: const EdgeInsets.only(left: 20),
-              color: Colors.green,
-              child: const Icon(Icons.push_pin, color: Colors.white),
+              color: Theme.of(context).colorScheme.tertiary,
+              child: Icon(Icons.push_pin, color: Theme.of(context).colorScheme.onPrimary),
             ),
             secondaryBackground: Container(
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 20),
-              color: Colors.red,
-              child: const Icon(Icons.delete, color: Colors.white),
+              color: Theme.of(context).colorScheme.error,
+              child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onPrimary),
             ),
             child: _buildNoteCard(note, isPinned: isPinned),
           );
@@ -571,7 +571,7 @@ class _HomeScreenState extends State<HomeScreen> {
       elevation: 1,
       margin: const EdgeInsets.only(bottom: 4),
       color: _selectionMode && _selectedNoteIds.contains(note.id)
-          ? Colors.blue.withValues(alpha: 0.1)
+          ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
           : null,
       child: InkWell(
         onTap: () => _selectionMode
@@ -592,11 +592,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: Colors.blueGrey[50],
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Icon(Icons.description_outlined,
-                        color: Colors.blueGrey[400]),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -612,10 +612,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 overflow: TextOverflow.ellipsis),
                           ),
                           if (isPinned)
-                            const Padding(
+                            Padding(
                               padding: EdgeInsets.only(left: 4),
                               child: Icon(Icons.push_pin,
-                                  size: 14, color: Colors.orange),
+                                  size: 14, color: Theme.of(context).colorScheme.secondary),
                             ),
                         ]),
                         if (subtitle.isNotEmpty) ...[
@@ -623,7 +623,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(subtitle,
                               style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey[600],
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                   height: 1.3),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis),
@@ -636,10 +636,10 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
+                  Icon(Icons.access_time, size: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38)),
                   const SizedBox(width: 4),
                   Text(_formatDate(note.updatedAt),
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
                 ],
               ),
               if (note.tags.isNotEmpty || (_linkCounts[note.id] ?? 0) > 0) ...[
@@ -654,14 +654,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           '${_linkCounts[note.id]} link${(_linkCounts[note.id] ?? 0) == 1 ? '' : 's'}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10,
-                            color: Colors.blue,
+                            color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -725,10 +725,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text('Note created'),
               duration: Duration(seconds: 1),
-              backgroundColor: Colors.green,
+              backgroundColor: Theme.of(context).colorScheme.tertiary,
             ),
           );
         } catch (e) {
@@ -777,10 +777,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Note imported successfully'),
             duration: Duration(seconds: 1),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
           ),
         );
       } catch (e) {
@@ -830,17 +830,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTagFilterBanner() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Colors.blueGrey[50],
+      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
       child: Row(
         children: [
-          const Icon(Icons.filter_alt, size: 16, color: Colors.blueGrey),
+          Icon(Icons.filter_alt, size: 16, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Filtered by $_activeTagFilter ($_filteredCount note${_filteredCount == 1 ? '' : 's'})',
               style: TextStyle(
                   fontSize: 13,
-                  color: Colors.blueGrey[700],
+                  color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.w500),
             ),
           ),

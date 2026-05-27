@@ -144,8 +144,10 @@ class _EditorPaneState extends State<EditorPane> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
-      color: Colors.white,
+      color: colorScheme.surface,
       child: Column(
         children: [
           if (widget.showLineNumbers) _buildFormattingToolbar(context),
@@ -154,11 +156,11 @@ class _EditorPaneState extends State<EditorPane> {
               controller: widget.controller,
               focusNode: _focusNode,
               onChanged: widget.onChanged,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'monospace',
                 fontSize: 14,
                 height: 1.6,
-                color: Color(0xFF2D3436),
+                color: colorScheme.onSurface,
               ),
               decoration: const InputDecoration(
                 border: InputBorder.none,
@@ -179,12 +181,16 @@ class _EditorPaneState extends State<EditorPane> {
   }
 
   Widget _buildFormattingToolbar(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: colorScheme.surfaceContainerHighest,
         border: Border(
-          bottom: BorderSide(color: Colors.grey[200]!),
+          bottom: BorderSide(
+            color: colorScheme.onSurface.withValues(alpha: 0.12),
+          ),
         ),
       ),
       child: Row(
@@ -235,6 +241,8 @@ class _EditorPaneState extends State<EditorPane> {
     required String tooltip,
     required VoidCallback onPressed,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Tooltip(
       message: tooltip,
       child: InkWell(
@@ -242,13 +250,18 @@ class _EditorPaneState extends State<EditorPane> {
         borderRadius: BorderRadius.circular(4),
         child: Padding(
           padding: const EdgeInsets.all(6),
-          child: Icon(icon, size: 20, color: Colors.grey[700]),
+          child: Icon(
+            icon,
+            size: 20,
+            color: colorScheme.onSurface.withValues(alpha: 0.70),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildFooter(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final text = widget.controller.text;
     final wordCount = _countWords(text);
     final charCount = text.length;
@@ -256,14 +269,17 @@ class _EditorPaneState extends State<EditorPane> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      color: Colors.grey[50],
+      color: colorScheme.surfaceContainerHighest,
       child: Row(
         children: [
           Flexible(
             child: Text(
               '$lineCount lines $wordCount words $charCount chars',
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.grey[400], fontSize: 11),
+              style: TextStyle(
+                color: colorScheme.onSurface.withValues(alpha: 0.38),
+                fontSize: 11,
+              ),
             ),
           ),
         ],

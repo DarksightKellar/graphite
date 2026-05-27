@@ -42,11 +42,12 @@ class _TagBrowserScreenState extends State<TagBrowserScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Tags'),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
+        // Use theme's AppBar styling, previously had transparent bg + white text bug
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -56,12 +57,15 @@ class _TagBrowserScreenState extends State<TagBrowserScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.tag_outlined,
-                          size: 64, color: Colors.grey[400]),
+                          size: 64,
+                          color: colorScheme.onSurface.withValues(alpha: 0.38)),
                       const SizedBox(height: 16),
                       Text(
                         'No tags found',
-                        style:
-                            TextStyle(fontSize: 18, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: colorScheme.onSurface.withValues(alpha: 0.60),
+                        ),
                       ),
                     ],
                   ),
@@ -79,18 +83,20 @@ class _TagBrowserScreenState extends State<TagBrowserScreen> {
   }
 
   Widget _buildTagRow(Tag tag) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return InkWell(
       onTap: () => Navigator.pop(context, tag.id),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
-            Icon(Icons.tag, color: Colors.blueGrey[700], size: 18),
+            Icon(Icons.tag, color: colorScheme.primary, size: 18),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -98,7 +104,7 @@ class _TagBrowserScreenState extends State<TagBrowserScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Colors.blueGrey[800],
+                  color: colorScheme.primary,
                 ),
               ),
             ),
@@ -106,12 +112,14 @@ class _TagBrowserScreenState extends State<TagBrowserScreen> {
               '${tag.noteCount} note${tag.noteCount == 1 ? '' : 's'}',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[500],
+                color: colorScheme.onSurface.withValues(alpha: 0.50),
                 fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.chevron_right, size: 18, color: Colors.grey[400]),
+            Icon(Icons.chevron_right,
+                size: 18,
+                color: colorScheme.onSurface.withValues(alpha: 0.38)),
           ],
         ),
       ),

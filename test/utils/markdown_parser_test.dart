@@ -114,8 +114,8 @@ void main() {
       expect(children, isNotNull);
       final hasWikiLink = children!.any((s) {
         if (s is TextSpan) {
-          return s.style?.color == Colors.blue &&
-              s.style?.decoration == TextDecoration.underline;
+          return s.style?.decoration == TextDecoration.underline &&
+              s.style?.fontWeight == FontWeight.w500;
         }
         return false;
       });
@@ -129,7 +129,8 @@ void main() {
       expect(children, isNotNull);
       final hasTag = children!.any((s) {
         if (s is TextSpan) {
-          return s.style?.color == Colors.green;
+          return s.style?.fontWeight == FontWeight.w500 &&
+              s.style?.decoration == null;
         }
         return false;
       });
@@ -307,7 +308,9 @@ void main() {
       expect(spans, isNotEmpty);
       final children = spans.first.children;
       final tagSpans = children!
-          .where((s) => s is TextSpan && s.style?.color == Colors.green)
+          .where((s) => s is TextSpan &&
+              s.style?.fontWeight == FontWeight.w500 &&
+              s.style?.decoration == null)
           .toList();
       expect(tagSpans.length, equals(2));
     });
@@ -319,8 +322,8 @@ void main() {
       final wikiSpans = children!
           .where((s) =>
               s is TextSpan &&
-              s.style?.color == Colors.blue &&
-              s.style?.decoration == TextDecoration.underline)
+              s.style?.decoration == TextDecoration.underline &&
+              s.style?.fontWeight == FontWeight.w500)
           .toList();
       expect(wikiSpans.length, equals(2));
     });
@@ -462,11 +465,12 @@ void main() {
       expect(spans, isNotEmpty);
     });
 
-    test('renders #tag with green color', () {
+    test('renders #tag with styled color', () {
       final spans = buildPreviewSpans('Check #todo item.');
       final hasTag = spans.any((s) {
         if (s is TextSpan) {
-          return s.style?.color == Colors.green;
+          return s.style?.fontWeight == FontWeight.w500 &&
+              s.style?.color != null;
         }
         return false;
       });

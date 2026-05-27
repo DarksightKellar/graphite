@@ -15,30 +15,39 @@ class PreviewPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (content.isEmpty) {
       return Container(
-        color: const Color(0xFFF5F6FA),
+        color: colorScheme.surface,
         padding: const EdgeInsets.all(32),
         child: Center(
           child: Text(
             'No content to preview',
-            style: TextStyle(color: Colors.grey[400], fontSize: 14),
+            style: TextStyle(
+              color: colorScheme.onSurface.withValues(alpha: 0.38),
+              fontSize: 14,
+            ),
           ),
         ),
       );
     }
 
-    final spans = buildPreviewSpans(content, onLinkTap: onLinkTap);
+    final spans = buildPreviewSpans(
+      content,
+      onLinkTap: onLinkTap,
+      colorScheme: colorScheme,
+    );
 
     return Container(
-      color: const Color(0xFFF5F6FA),
+      color: colorScheme.surface,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: RichText(
           text: TextSpan(
             children: spans,
-            style: const TextStyle(
-              color: Colors.black87,
+            style: TextStyle(
+              color: colorScheme.onSurface,
               fontSize: 16,
             ),
           ),

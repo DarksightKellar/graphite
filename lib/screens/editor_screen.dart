@@ -246,6 +246,8 @@ class _EditorScreenState extends State<EditorScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return PopScope(
       canPop: !_hasUnsavedChanges,
       onPopInvokedWithResult: (didPop, result) async {
@@ -258,20 +260,22 @@ class _EditorScreenState extends State<EditorScreen>
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Edit Note'),
-          backgroundColor: Colors.blueGrey[900],
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
           actions: [
             if (_showSaved)
-              const Padding(
-                padding: EdgeInsets.only(right: 16),
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check, size: 18, color: Colors.greenAccent),
-                    SizedBox(width: 4),
+                    Icon(Icons.check,
+                        size: 18, color: colorScheme.tertiary),
+                    const SizedBox(width: 4),
                     Text(
                       'Saved',
                       style: TextStyle(
-                        color: Colors.greenAccent,
+                        color: colorScheme.tertiary,
                         fontSize: 14,
                       ),
                     ),
@@ -279,14 +283,14 @@ class _EditorScreenState extends State<EditorScreen>
                 ),
               )
             else if (_isSaving)
-              const Padding(
-                padding: EdgeInsets.only(right: 16),
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
                 child: SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: colorScheme.onPrimary,
                   ),
                 ),
               )
@@ -304,7 +308,7 @@ class _EditorScreenState extends State<EditorScreen>
                 ? Center(
                     child: Text(
                       'Failed to load: $_loadError',
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(color: colorScheme.error),
                     ),
                   )
                 : GestureDetector(

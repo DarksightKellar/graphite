@@ -24,7 +24,7 @@ A modern, local-first note-taking app built with Flutter. Clean architecture fro
 
 1. **Clone the repository**
    ```bash
-   cd /home/kel/projects/graphite
+   cd graphite
    flutter pub get
    ```
 
@@ -49,12 +49,14 @@ A modern, local-first note-taking app built with Flutter. Clean architecture fro
 
 ```
 lib/
-├── main.dart                 # App entry point + router
+├── main.dart                 # App entry point
+├── router/                   # Route definitions (app_router.dart)
 ├── models/                   # Core data: Note, Tag, Link
-├── data/                     # Platform abstractions (FileRepository)
+├── data/                     # Platform abstractions (database, file picker, file system)
 ├── repository/               # Business logic (NoteRepository)
-├── utils/                    # Helpers (MarkdownParser)
-└── screens/                  # UI widgets (HomeScreen, EditorScreen...)
+├── utils/                    # Helpers (markdown_parser)
+├── widgets/                  # Reusable UI components (editor, preview, quick capture)
+└── screens/                  # Full-screen views (Home, Editor, Graph, Tag Browser)
 ```
 
 ## Architecture Principles
@@ -93,12 +95,10 @@ Graphite is designed to work **fully offline** — no network connection is ever
 - [ ] Template library
 
 ## Technical Debt Tracker
-| Issue | Status | Priority |
-|-------|--------|----------|
-| Add real markdown rendering | TODO | High |
-| Implement proper line numbers with syntax tokens | TODO | Medium |
-| Graph view needs fl_chart integration | TODO | High |
-| Tag filtering state management (Bloc) | TODO | Medium |
+- Add real markdown rendering — **High priority**
+- Implement proper line numbers with syntax tokens — **Medium priority**
+- Graph view needs fl_chart integration — **High priority**
+- Tag filtering state management (Bloc) — **Medium priority**
 
 ## License
 MIT — Open source, free to use and modify.

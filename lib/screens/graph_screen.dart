@@ -9,14 +9,19 @@ class GraphScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Graph'),
       ),
-      body: const Center(
+      body: Center(
         child: Text(
           'Knowledge Graph — Coming Soon',
-          style: TextStyle(color: Colors.grey, fontSize: 16),
+          style: TextStyle(
+            color: colorScheme.onSurface.withValues(alpha: 0.50),
+            fontSize: 16,
+          ),
         ),
       ),
     );

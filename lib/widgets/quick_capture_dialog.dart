@@ -103,6 +103,8 @@ class _QuickCaptureDialogState extends State<QuickCaptureDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return PopScope(
       canPop: !_hasUnsavedContent() || _allowPop,
       onPopInvokedWithResult: (didPop, result) {
@@ -142,7 +144,10 @@ class _QuickCaptureDialogState extends State<QuickCaptureDialog> {
               Text(
                 '${_contentController.text.length} chars · '
                 '${_contentController.text.split(RegExp(r'\\s+')).where((w) => w.isNotEmpty).length} words',
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colorScheme.onSurface.withValues(alpha: 0.60),
+                ),
               ),
             ],
             if (_tags.isNotEmpty) ...[

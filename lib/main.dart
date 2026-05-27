@@ -16,10 +16,19 @@ class GraphiteApp extends StatelessWidget {
       title: 'Graphite — Local-First Notes',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blueGrey,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF546E7A),
+          brightness: Brightness.light,
+        ).copyWith(
+          secondary: const Color(0xFF1976D2),
+          tertiary: const Color(0xFF00E676),
+          surface: const Color(0xFFFAFAF9),
+          surfaceContainerHighest: const Color(0xFFD6DBDF),
+          error: Colors.red,
+        ),
         scaffoldBackgroundColor: const Color(0xFFFAFAF9),
-        appBarTheme: AppBarTheme(
-          backgroundColor: const Color(0xFF2D3436),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF2D3436),
           foregroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
@@ -30,8 +39,15 @@ class GraphiteApp extends StatelessWidget {
         ),
       ),
       darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.blueGrey,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF90A4AE),
+          brightness: Brightness.dark,
+        ).copyWith(
+          secondary: const Color(0xFF64B5F6),
+          tertiary: const Color(0xFF69F0AE),
+          surface: const Color(0xFF1A1D23),
+          error: const Color(0xFFEF5350),
+        ),
         scaffoldBackgroundColor: const Color(0xFF1A1D23),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF2D3436),

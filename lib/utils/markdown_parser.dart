@@ -25,10 +25,20 @@ List<String> extractTags(String content) {
   return matches.map((m) => m.group(0)!).toList();
 }
 
+/// Fallback color scheme used when none is provided (e.g., in tests).
+ColorScheme _defaultColorScheme() => ColorScheme.fromSeed(
+      seedColor: const Color(0xFF546E7A),
+      brightness: Brightness.light,
+    ).copyWith(
+      secondary: const Color(0xFF1976D2),
+      tertiary: const Color(0xFF00E676),
+    );
+
 /// Parse markdown content and return styled text spans.
 /// Handles: H1-H3 headings, ordered/unordered lists, bold, italic, code blocks,
 /// wiki-links, tags.
-List<TextSpan> parseMarkdown(String input) {
+List<TextSpan> parseMarkdown(String input, {ColorScheme? colorScheme}) {
+  final scheme = colorScheme ?? _defaultColorScheme();
   final lines = input.split('\n');
   final List<TextSpanResult> results = [];
 
@@ -96,27 +106,32 @@ List<TextSpan> parseMarkdown(String input) {
     results.addAll(_parseTextLine(line));
   }
 
-  return [TextSpan(children: results.map((r) => _buildSpan(r)).toList())];
+  return [
+    TextSpan(children: results.map((r) => _buildSpan(r, scheme)).toList())
+  ];
 }
 
-TextSpan _buildSpan(TextSpanResult result) {
+TextSpan _buildSpan(TextSpanResult result, ColorScheme scheme) {
   switch (result.type) {
     case SpanType.headings:
       final level = result.subType as HeadingLevel;
-      return _renderHeading(level, result.data);
+      return _renderHeading(level, result.data, scheme);
 
     case SpanType.lists:
       return TextSpan(
         text: '\u2022 ${result.data.trim()}\n',
-        style: const TextStyle(color: Colors.black54, fontSize: 16),
+        style: TextStyle(
+          color: scheme.onSurface.withValues(alpha: 0.54),
+          fontSize: 16,
+        ),
       );
 
     case SpanType.bold:
       return TextSpan(
         text: result.data,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.bold,
-          color: Colors.black87,
+          color: scheme.onSurface,
           fontSize: 16,
         ),
       );
@@ -124,9 +139,9 @@ TextSpan _buildSpan(TextSpanResult result) {
     case SpanType.italic:
       return TextSpan(
         text: result.data,
-        style: const TextStyle(
+        style: TextStyle(
           fontStyle: FontStyle.italic,
-          color: Colors.black87,
+          color: scheme.onSurface,
           fontSize: 16,
         ),
       );
@@ -134,37 +149,37 @@ TextSpan _buildSpan(TextSpanResult result) {
     case SpanType.code:
       return TextSpan(
         text: '${result.data}\n',
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'monospace',
           fontSize: 14,
-          color: Color(0xFF2D3436),
-          backgroundColor: Color(0xFFF0F0F0),
+          color: scheme.onSurface,
+          backgroundColor: scheme.surfaceContainerHighest,
         ),
       );
 
     case SpanType.text:
       return TextSpan(
         text: '${result.data}\n',
-        style: const TextStyle(color: Colors.black87, fontSize: 16),
+        style: TextStyle(color: scheme.onSurface, fontSize: 16),
       );
 
     case SpanType.wikiLink:
       return TextSpan(
         text: result.data,
-        style: const TextStyle(
-          color: Colors.blue,
+        style: TextStyle(
+          color: scheme.secondary,
           fontSize: 16,
           fontWeight: FontWeight.w500,
           decoration: TextDecoration.underline,
-          decorationColor: Colors.blue,
+          decorationColor: scheme.secondary,
         ),
       );
 
     case SpanType.tag:
       return TextSpan(
         text: result.data,
-        style: const TextStyle(
-          color: Colors.green,
+        style: TextStyle(
+          color: scheme.tertiary,
           fontSize: 16,
           fontWeight: FontWeight.w500,
         ),
@@ -178,10 +193,10 @@ List<TextSpanResult> _parseTextLine(String line) {
   final results = <TextSpanResult>[];
   // Combined pattern: **bold**, *italic*, [[wiki-link]], or #tag
   final pattern = RegExp(
-    r'\*\*(.+?)\*\*'     // bold
-    r'|\*(.+?)\*'         // italic
+    r'\*\*(.+?)\*\*' // bold
+    r'|\*(.+?)\*' // italic
     r'|(?<!\\)\[\[(.+?)\]\]' // wiki-link
-    r'|#[a-zA-Z0-9_-]+'   // tag
+    r'|#[a-zA-Z0-9_-]+' // tag
   );
   int lastEnd = 0;
 
@@ -233,7 +248,8 @@ List<TextSpanResult> _parseTextLine(String line) {
   return results;
 }
 
-TextSpan _renderHeading(HeadingLevel level, String text) {
+TextSpan _renderHeading(
+    HeadingLevel level, String text, ColorScheme scheme) {
   switch (level.level) {
     case 1:
       return TextSpan(
@@ -241,7 +257,7 @@ TextSpan _renderHeading(HeadingLevel level, String text) {
         style: TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 28,
-          color: Colors.blueGrey[800],
+          color: scheme.primary,
         ),
       );
     case 2:
@@ -250,7 +266,7 @@ TextSpan _renderHeading(HeadingLevel level, String text) {
         style: TextStyle(
           fontWeight: FontWeight.w600,
           fontSize: 22,
-          color: Colors.blueGrey[700],
+          color: scheme.primary,
         ),
       );
     case 3:
@@ -259,7 +275,7 @@ TextSpan _renderHeading(HeadingLevel level, String text) {
         style: TextStyle(
           fontWeight: FontWeight.w500,
           fontSize: 18,
-          color: Colors.blueGrey[600],
+          color: scheme.primary,
         ),
       );
     default:
@@ -273,7 +289,9 @@ TextSpan _renderHeading(HeadingLevel level, String text) {
 List<InlineSpan> buildPreviewSpans(
   String content, {
   void Function(String title)? onLinkTap,
+  ColorScheme? colorScheme,
 }) {
+  final scheme = colorScheme ?? _defaultColorScheme();
   final lines = content.split('\n');
   final spans = <InlineSpan>[];
 
@@ -287,11 +305,11 @@ List<InlineSpan> buildPreviewSpans(
         if (codeLines.isNotEmpty) {
           spans.add(TextSpan(
             text: '${codeLines.join('\n')}\n',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'monospace',
               fontSize: 14,
-              color: Color(0xFF2D3436),
-              backgroundColor: Color(0xFFF0F0F0),
+              color: scheme.onSurface,
+              backgroundColor: scheme.surfaceContainerHighest,
             ),
           ));
           codeLines.clear();
@@ -315,7 +333,7 @@ List<InlineSpan> buildPreviewSpans(
     if (headingMatch != null) {
       final level = headingMatch.group(1)!.length;
       final text = headingMatch.group(2)!;
-      spans.add(_renderHeading(HeadingLevel(level), text));
+      spans.add(_renderHeading(HeadingLevel(level), text, scheme));
       continue;
     }
 
@@ -324,7 +342,10 @@ List<InlineSpan> buildPreviewSpans(
     if (orderedMatch != null) {
       spans.add(TextSpan(
         text: '${orderedMatch.group(1)!}. ${orderedMatch.group(2)!}\n',
-        style: const TextStyle(color: Colors.black54, fontSize: 16),
+        style: TextStyle(
+          color: scheme.onSurface.withValues(alpha: 0.54),
+          fontSize: 16,
+        ),
       ));
       continue;
     }
@@ -334,13 +355,17 @@ List<InlineSpan> buildPreviewSpans(
     if (unorderedMatch != null) {
       spans.add(TextSpan(
         text: '\u2022 ${unorderedMatch.group(1)!}\n',
-        style: const TextStyle(color: Colors.black54, fontSize: 16),
+        style: TextStyle(
+          color: scheme.onSurface.withValues(alpha: 0.54),
+          fontSize: 16,
+        ),
       ));
       continue;
     }
 
     // Regular text — detect inline formatting and [[wiki-links]]
-    spans.addAll(_parsePreviewLine(line, onLinkTap: onLinkTap));
+    spans.addAll(
+        _parsePreviewLine(line, onLinkTap: onLinkTap, colorScheme: scheme));
   }
 
   return spans;
@@ -351,13 +376,15 @@ List<InlineSpan> buildPreviewSpans(
 List<InlineSpan> _parsePreviewLine(
   String line, {
   void Function(String title)? onLinkTap,
+  required ColorScheme colorScheme,
 }) {
+  final scheme = colorScheme;
   final spans = <InlineSpan>[];
   final pattern = RegExp(
-    r'\*\*(.+?)\*\*'       // bold
-    r'|\*(.+?)\*'           // italic
+    r'\*\*(.+?)\*\*' // bold
+    r'|\*(.+?)\*' // italic
     r'|(?<!\\)\[\[(.+?)\]\]' // wiki-link
-    r'|#[a-zA-Z0-9_-]+'     // tag
+    r'|#[a-zA-Z0-9_-]+' // tag
   );
   int lastEnd = 0;
 
@@ -366,7 +393,7 @@ List<InlineSpan> _parsePreviewLine(
     if (match.start > lastEnd) {
       spans.add(TextSpan(
         text: line.substring(lastEnd, match.start),
-        style: const TextStyle(color: Colors.black87, fontSize: 16),
+        style: TextStyle(color: scheme.onSurface, fontSize: 16),
       ));
     }
 
@@ -378,9 +405,9 @@ List<InlineSpan> _parsePreviewLine(
       if (text.isNotEmpty) {
         spans.add(TextSpan(
           text: text,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: scheme.onSurface,
             fontSize: 16,
           ),
         ));
@@ -391,9 +418,9 @@ List<InlineSpan> _parsePreviewLine(
       if (text.isNotEmpty) {
         spans.add(TextSpan(
           text: text,
-          style: const TextStyle(
+          style: TextStyle(
             fontStyle: FontStyle.italic,
-            color: Colors.black87,
+            color: scheme.onSurface,
             fontSize: 16,
           ),
         ));
@@ -409,18 +436,19 @@ List<InlineSpan> _parsePreviewLine(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.1),
+                color: scheme.secondary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                border: Border.all(
+                    color: scheme.secondary.withValues(alpha: 0.3)),
               ),
               child: Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.blue,
+                style: TextStyle(
+                  color: scheme.secondary,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                   decoration: TextDecoration.underline,
-                  decorationColor: Colors.blue,
+                  decorationColor: scheme.secondary,
                 ),
               ),
             ),
@@ -431,8 +459,8 @@ List<InlineSpan> _parsePreviewLine(
       // Tag
       spans.add(TextSpan(
         text: matched,
-        style: const TextStyle(
-          color: Colors.green,
+        style: TextStyle(
+          color: scheme.tertiary,
           fontSize: 16,
           fontWeight: FontWeight.w500,
         ),
@@ -446,7 +474,7 @@ List<InlineSpan> _parsePreviewLine(
   final trailing = lastEnd < line.length ? line.substring(lastEnd) : '';
   spans.add(TextSpan(
     text: '$trailing\n',
-    style: const TextStyle(color: Colors.black87, fontSize: 16),
+    style: TextStyle(color: scheme.onSurface, fontSize: 16),
   ));
 
   return spans;
