@@ -12,7 +12,6 @@ import '../usecases/save_note_use_case.dart';
 /// Router configuration for Graphite app.
 final appRouter = GoRouter(
   initialLocation: '/',
-  redirect: (_, state) => '/',
   routes: [
     GoRoute(
       path: '/',
