@@ -211,4 +211,119 @@ void main() {
       expect(results, isEmpty);
     });
   });
+
+  group('initialize', () {
+    test('delegates to database initialize', () async {
+      // Should complete without error — no-op if already initialized
+      await repo.initialize();
+    });
+  });
+
+  group('extractLinks', () {
+    test('extracts [[wiki-links]] from content', () async {
+      final created = await repo.createNote(
+        _testNote('linker', '# Note\n\nSee [[Target Page]] for details.'),
+      );
+
+      await repo.extractLinks(created.id, created.content);
+
+      // Verify links were stored via getLinkCount
+      final count = await repo.getLinkCount(created.id);
+      expect(count, equals(1));
+    });
+
+    test('handles content with no links', () async {
+      final created = await repo.createNote(
+        _testNote('plain', '# Note\n\nNo links here.'),
+      );
+
+      await repo.extractLinks(created.id, created.content);
+
+      final count = await repo.getLinkCount(created.id);
+      expect(count, equals(0));
+    });
+  });
+
+  group('findNoteByTitle', () {
+    test('finds note by case-insensitive path match', () async {
+      await repo.createNote(_testNote('TargetPage', '# Target Page Content'));
+
+      final found = await repo.findNoteByTitle('targetpage');
+      expect(found, isNotNull);
+      expect(found!.path, equals('TargetPage'));
+    });
+
+    test('returns null for non-existent title', () async {
+      final found = await repo.findNoteByTitle('nope');
+      expect(found, isNull);
+    });
+  });
+
+  group('getLinkCount', () {
+    test('returns 0 when note has no links', () async {
+      final created = await repo.createNote(
+        _testNote('nolinks', '# No links here.'),
+      );
+
+      final count = await repo.getLinkCount(created.id);
+      expect(count, equals(0));
+    });
+  });
+
+  group('getNotesWithLinks', () {
+    test('returns only notes that have wiki-links', () async {
+      final linked = await repo.createNote(
+        _testNote('linked', '# Linked\n\nSee [[Another]].'),
+      );
+      await repo.createNote(
+        _testNote('plain', '# Plain\n\nNo links.'),
+      );
+
+      await repo.extractLinks(linked.id, linked.content);
+
+      final results = await repo.getNotesWithLinks();
+      expect(results.length, equals(1));
+      expect(results.first.id, equals(linked.id));
+    });
+  });
+
+  group('getNotesByTag', () {
+    test('returns notes matching a tag', () async {
+      await repo.createNote(_testNote('work-note', '# Work', tags: ['work']));
+      await repo.createNote(
+          _testNote('personal-note', '# Personal', tags: ['personal']));
+      await repo.createNote(
+          _testNote('both-note', '# Both', tags: ['work', 'personal']));
+
+      final results = await repo.getNotesByTag('work');
+      expect(results.length, equals(2));
+      expect(results.map((n) => n.path), containsAll(['work-note', 'both-note']));
+    });
+
+    test('returns empty when no notes have tag', () async {
+      final results = await repo.getNotesByTag('nonexistent');
+      expect(results, isEmpty);
+    });
+  });
+
+  group('getAllTags', () {
+    test('returns all unique tags with note counts', () async {
+      await repo.createNote(_testNote('a', '# A', tags: ['work', 'ideas']));
+      await repo.createNote(_testNote('b', '# B', tags: ['work']));
+
+      final tags = await repo.getAllTags();
+      expect(tags.length, equals(2));
+
+      final workTag = tags.firstWhere((t) => t.id == 'work');
+      expect(workTag.noteCount, equals(2));
+
+      final ideasTag = tags.firstWhere((t) => t.id == 'ideas');
+      expect(ideasTag.noteCount, equals(1));
+    });
+
+    test('returns empty when no notes exist', () async {
+      final tags = await repo.getAllTags();
+      expect(tags, isEmpty);
+    });
+  });
 }

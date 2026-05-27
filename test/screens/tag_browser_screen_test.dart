@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphite/models/note.dart';
 import 'package:graphite/screens/tag_browser_screen.dart';
-import '../helpers/fake_graphite_db.dart';
+import '../helpers/fake_note_repository.dart';
 
 void main() {
-  late FakeGraphiteDB fakeDb;
+  late FakeNoteRepository fakeRepo;
 
   setUp(() {
-    fakeDb = FakeGraphiteDB();
+    fakeRepo = FakeNoteRepository();
   });
 
   Widget _wrap(Widget child) {
@@ -21,7 +21,7 @@ void main() {
 
   group('tag list', () {
     testWidgets('lists all tags with note counts', (tester) async {
-      fakeDb.notes.add(Note(
+      fakeRepo.notes.add(Note(
         id: 'a',
         path: 'Note A',
         filePath: 'a.md',
@@ -30,7 +30,7 @@ void main() {
         content: '# Note A\n\nContent with #work and #ideas.',
         tags: const ['work', 'ideas'],
       ));
-      fakeDb.notes.add(Note(
+      fakeRepo.notes.add(Note(
         id: 'b',
         path: 'Note B',
         filePath: 'b.md',
@@ -41,7 +41,7 @@ void main() {
       ));
 
       await tester.pumpWidget(
-          _wrap(TagBrowserScreen(db: fakeDb)));
+          _wrap(TagBrowserScreen(repo: fakeRepo)));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -55,7 +55,7 @@ void main() {
 
   group('tap tag', () {
     testWidgets('tapping a tag pops with the tag id', (tester) async {
-      fakeDb.notes.add(Note(
+      fakeRepo.notes.add(Note(
         id: 't1',
         path: 'Tagged Note',
         filePath: 'tagged.md',
@@ -74,7 +74,7 @@ void main() {
                   Navigator.push<String>(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => TagBrowserScreen(db: fakeDb)),
+                        builder: (_) => TagBrowserScreen(repo: fakeRepo)),
                   );
                 },
                 child: const Text('Open Tags'),
@@ -107,7 +107,7 @@ void main() {
     testWidgets('shows empty state when no tags exist', (tester) async {
       // No notes = no tags
       await tester.pumpWidget(
-          _wrap(TagBrowserScreen(db: fakeDb)));
+          _wrap(TagBrowserScreen(repo: fakeRepo)));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 

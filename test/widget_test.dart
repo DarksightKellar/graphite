@@ -1,30 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphite/data/database.dart';
 import 'package:graphite/models/note.dart';
 import 'package:graphite/screens/home_screen.dart';
-
-/// A GraphiteDB that returns pre-seeded notes without needing sqflite.
-class _FakeGraphiteDB extends GraphiteDB {
-  final List<Note> _notes;
-
-  _FakeGraphiteDB(this._notes);
-
-  @override
-  Future<void> initialize() async {
-    // No-op — no real database needed.
-  }
-
-  @override
-  Future<List<Note>> listNotes() async => List.unmodifiable(_notes);
-
-  @override
-  Future<List<Note>> searchNotes(String query) async {
-    return _notes
-        .where((n) => n.content.toLowerCase().contains(query.toLowerCase()))
-        .toList();
-  }
-}
+import 'helpers/fake_note_repository.dart';
 
 /// The welcome note that GraphiteDB._onCreate would seed on first launch.
 final _welcomeNote = Note(
@@ -52,8 +30,9 @@ void main() {
     WidgetTester tester,
   ) async {
     // Given: a fresh install with only the welcome note seeded
-    final db = _FakeGraphiteDB([_welcomeNote]);
-    await tester.pumpWidget(MaterialApp(home: HomeScreen(db: db)));
+    final repo = FakeNoteRepository();
+    repo.notes.add(_welcomeNote);
+    await tester.pumpWidget(MaterialApp(home: HomeScreen(repo: repo)));
 
     // Allow async init to settle
     await tester.pump();
@@ -72,12 +51,13 @@ void main() {
   testWidgets('empty vault shows no notes placeholder', (
     WidgetTester tester,
   ) async {
-    final db = _FakeGraphiteDB([]);
-    await tester.pumpWidget(MaterialApp(home: HomeScreen(db: db)));
+    final repo = FakeNoteRepository();
+    await tester.pumpWidget(MaterialApp(home: HomeScreen(repo: repo)));
 
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('No notes yet. Tap + to create your first note.'), findsOneWidget);
+    expect(find.text('No notes yet. Tap + to create your first note.'),
+        findsOneWidget);
   });
 }

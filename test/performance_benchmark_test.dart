@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphite/data/database.dart';
 import 'package:graphite/models/note.dart';
+import 'package:graphite/repository/note_repository.dart';
 import 'package:graphite/screens/editor_screen.dart';
 import 'package:graphite/screens/home_screen.dart';
 import 'package:graphite/widgets/editor_pane.dart';
@@ -164,7 +165,7 @@ void main() {
       final sw = Stopwatch()..start();
       await tester.pumpWidget(
         MaterialApp(
-          home: HomeScreen(db: db),
+          home: HomeScreen(repo: NoteRepository(db)),
         ),
       );
       // Wait for async data load
@@ -202,7 +203,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: HomeScreen(db: db),
+          home: HomeScreen(repo: NoteRepository(db)),
         ),
       );
       await tester.pumpAndSettle(const Duration(seconds: 30));

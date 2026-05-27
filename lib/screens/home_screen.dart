@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../data/database.dart';
+import '../repository/note_repository.dart';
 import '../data/file_picker.dart';
 import '../models/note.dart';
 import '../widgets/quick_capture_dialog.dart';
@@ -23,10 +24,10 @@ enum NoteFilter {
 
 /// HomeScreen with quick note capture, file import, and tag navigation.
 class HomeScreen extends StatefulWidget {
-  /// Optional injected database for testing. When null, creates a real [GraphiteDB].
-  final GraphiteDB? db;
+  /// Optional injected repository for testing. When null, creates a real [NoteRepository].
+  final NoteRepository? repo;
 
-  const HomeScreen({super.key, this.db});
+  const HomeScreen({super.key, this.repo});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -34,7 +35,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
-  late final GraphiteDB _db;
+  late final NoteRepository _repo;
   final GraphiteFilePicker _filePicker = GraphiteFilePicker();
   final TextEditingController _searchController = TextEditingController();
 
@@ -106,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (confirmed == true && mounted) {
       try {
         for (final id in _selectedNoteIds) {
-          await _db.deleteNote(id);
+          await _repo.deleteNote(id);
         }
         _exitSelectionMode();
         _loadNotes();
@@ -119,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _db = widget.db ?? GraphiteDB();
+    _repo = widget.repo ?? NoteRepository(GraphiteDB());
     _loadNotes();
   }
 
@@ -132,8 +133,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadNotes() async {
     try {
-      await _db.initialize();
-      final notes = await _db.listNotes();
+      await _repo.initialize();
+      final notes = await _repo.listAllNotes();
       if (!mounted) return;
       setState(() {
         _displayedNotes = notes;
@@ -144,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
       try {
         final counts = <String, int>{};
         for (final note in notes) {
-          final count = await _db.getLinkCount(note.id);
+          final count = await _repo.getLinkCount(note.id);
           counts[note.id] = count;
         }
         if (!mounted) return;
@@ -178,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _isSearching = true);
 
       try {
-        final results = await _db.searchNotes(query);
+        final results = await _repo.searchNotes(query);
         if (!mounted) return;
         setState(() {
           _displayedNotes = results;
@@ -250,8 +251,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadNotesWithLinks() async {
     try {
-      await _db.initialize();
-      final notes = await _db.getNotesWithLinks();
+      await _repo.initialize();
+      final notes = await _repo.getNotesWithLinks();
       if (!mounted) return;
       setState(() {
         _activeTagFilter = null;
@@ -513,7 +514,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
                 if (confirmed == true) {
                   try {
-                    await _db.deleteNote(note.id);
+                    await _repo.deleteNote(note.id);
                     _loadNotes();
                   } catch (e) {
                     debugPrint('Failed to delete note: $e');
@@ -719,7 +720,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
 
         try {
-          final created = await _db.createNote(note);
+          final created = await _repo.createNote(note);
           if (!mounted) return;
           Navigator.pushNamed(context, '/editor/${created.id}');
 
@@ -770,7 +771,7 @@ class _HomeScreenState extends State<HomeScreen> {
           tags: const [],
         );
 
-        final created = await _db.createNote(note);
+        final created = await _repo.createNote(note);
 
         if (!mounted) return;
         Navigator.pushNamed(context, '/editor/${created.id}');
@@ -866,7 +867,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Filter the note list to only show notes with [tag].
   Future<void> filterByTag(String tag) async {
     try {
-      final notes = await _db.getNotesByTag(tag);
+      final notes = await _repo.getNotesByTag(tag);
       if (!mounted) return;
       setState(() {
         _activeTagFilter = tag;
@@ -917,7 +918,7 @@ class _HomeScreenState extends State<HomeScreen> {
               );
 
               try {
-                await _db.createNote(note);
+                await _repo.createNote(note);
                 if (!mounted) return;
                 _loadNotes(); // refresh list with new note at top
               } catch (e) {

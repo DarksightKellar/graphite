@@ -4,13 +4,13 @@ import 'package:graphite/models/note.dart';
 import 'package:graphite/screens/editor_screen.dart';
 import 'package:graphite/widgets/editor_pane.dart';
 import 'package:graphite/widgets/preview_pane.dart';
-import '../helpers/fake_graphite_db.dart';
+import '../helpers/fake_note_repository.dart';
 
 void main() {
-  late FakeGraphiteDB fakeDb;
+  late FakeNoteRepository fakeRepo;
 
   setUp(() {
-    fakeDb = FakeGraphiteDB();
+    fakeRepo = FakeNoteRepository();
   });
 
   Widget _wrap(EditorScreen screen) {
@@ -36,7 +36,7 @@ void main() {
       tags: const ['tag1'],
     );
     final id = path.hashCode.toString();
-    fakeDb.notes.add(note.copyWith(id: id));
+    fakeRepo.notes.add(note.copyWith(id: id));
     return id;
   }
 
@@ -63,7 +63,7 @@ void main() {
     testWidgets('renders with existing note content', (tester) async {
       final noteId = _createNote();
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, db: fakeDb)));
+      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, repo: fakeRepo)));
       await pumpUntilSettled(tester);
 
       expect(find.byType(EditorPane), findsOneWidget);
@@ -74,7 +74,7 @@ void main() {
 
     testWidgets('renders empty for new note (non-existent id)', (tester) async {
       await tester.pumpWidget(_wrap(
-        EditorScreen(noteId: 'new-note-id', db: fakeDb),
+        EditorScreen(noteId: 'new-note-id', repo: fakeRepo),
       ));
       await pumpUntilSettled(tester);
 
@@ -90,7 +90,7 @@ void main() {
     testWidgets('typing in editor updates preview content', (tester) async {
       final noteId = _createNote();
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, db: fakeDb)));
+      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, repo: fakeRepo)));
       await pumpUntilSettled(tester);
 
       final editorPane = find.byType(EditorPane);
@@ -170,7 +170,7 @@ void main() {
         (tester) async {
       final noteId = _createNote();
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, db: fakeDb)));
+      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, repo: fakeRepo)));
       await pumpUntilSettled(tester);
 
       final editorPane = find.byType(EditorPane);
@@ -185,7 +185,7 @@ void main() {
       // Advance past auto-save timer (2 seconds)
       await tester.pump(const Duration(seconds: 3));
 
-      final updated = fakeDb.notes.firstWhere((n) => n.id == noteId);
+      final updated = fakeRepo.notes.firstWhere((n) => n.id == noteId);
       expect(updated.content.contains('Auto-Saved'), isTrue);
     });
   });
@@ -208,7 +208,7 @@ void main() {
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          EditorScreen(noteId: noteId, db: fakeDb),
+                          EditorScreen(noteId: noteId, repo: fakeRepo),
                     ),
                   );
                 },
@@ -255,7 +255,7 @@ void main() {
         content: '# Link\n\nSee [[OtherPage]] for details.',
       );
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, db: fakeDb)));
+      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, repo: fakeRepo)));
       await pumpUntilSettled(tester);
 
       expect(find.byType(PreviewPane), findsOneWidget);
@@ -271,7 +271,7 @@ void main() {
         content: '# My Note\n\nContent with #important tag.',
       );
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, db: fakeDb)));
+      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, repo: fakeRepo)));
       await pumpUntilSettled(tester);
 
       expect(find.byType(PreviewPane), findsOneWidget);

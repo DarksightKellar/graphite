@@ -1,58 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphite/data/database.dart';
 import 'package:graphite/models/note.dart';
 import 'package:graphite/screens/home_screen.dart';
-
-/// A fake database that stores notes in memory for widget testing.
-/// Avoids sqflite_common_ffi native library issues on WSL.
-class FakeGraphiteDB extends GraphiteDB {
-  final List<Note> _notes = [];
-  final Map<String, Set<String>> _links = {}; // noteId -> set of link targets
-
-  @override
-  Future<void> initialize() async {}
-
-  @override
-  Future<List<Note>> listNotes() async => List.unmodifiable(_notes);
-
-  @override
-  Future<List<Note>> searchNotes(String query) async {
-    final lower = query.toLowerCase();
-    return _notes.where((n) => n.content.toLowerCase().contains(lower)).toList();
-  }
-
-  @override
-  Future<Note> createNote(Note note) async {
-    final id = note.path.hashCode.toString();
-    final created = note.copyWith(id: id);
-    _notes.add(created);
-    return created;
-  }
-
-  @override
-  Future<void> deleteNote(String noteId) async {
-    _notes.removeWhere((n) => n.id == noteId);
-    _links.remove(noteId);
-  }
-
-  @override
-  Future<int> getLinkCount(String noteId) async =>
-      (_links[noteId]?.length) ?? 0;
-
-  @override
-  Future<List<Note>> getNotesByTag(String tag) async =>
-      _notes.where((n) => n.tags.contains(tag)).toList();
-
-  @override
-  Future<List<Note>> getNotesWithLinks() async =>
-      _notes.where((n) => (_links[n.id]?.isNotEmpty ?? false)).toList();
-
-  /// Inject links for testing (note content contains [[Target]]).
-  void addLinks(String noteId, Set<String> targets) {
-    _links[noteId] = targets;
-  }
-}
+import '../helpers/fake_note_repository.dart';
 
 /// Widget tests for HomeScreen.
 ///
@@ -60,15 +10,15 @@ class FakeGraphiteDB extends GraphiteDB {
 /// snippets), search filter, pull-to-refresh, long-press delete,
 /// tap-to-navigate.
 void main() {
-  late FakeGraphiteDB fakeDb;
+  late FakeNoteRepository fakeRepo;
 
   setUp(() {
-    fakeDb = FakeGraphiteDB();
+    fakeRepo = FakeNoteRepository();
   });
 
   Widget buildApp() {
     return MaterialApp(
-      home: HomeScreen(db: fakeDb),
+      home: HomeScreen(repo: fakeRepo),
       onGenerateRoute: (settings) {
         if (settings.name == '/tags') {
           return MaterialPageRoute(
@@ -150,8 +100,8 @@ void main() {
     });
 
     testWidgets('tapping clear button resets search', (tester) async {
-      fakeDb._notes.add(_makeNote('Alpha', 'Findable note.'));
-      fakeDb._notes.add(_makeNote('Beta', 'Nothing here.'));
+      fakeRepo.notes.add(_makeNote('Alpha', 'Findable note.'));
+      fakeRepo.notes.add(_makeNote('Beta', 'Nothing here.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -170,8 +120,8 @@ void main() {
     });
 
     testWidgets('debounces search by 300ms', (tester) async {
-      fakeDb._notes.add(_makeNote('Alpha', 'Findable note.'));
-      fakeDb._notes.add(_makeNote('Beta', 'Nothing here.'));
+      fakeRepo.notes.add(_makeNote('Alpha', 'Findable note.'));
+      fakeRepo.notes.add(_makeNote('Beta', 'Nothing here.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -222,7 +172,7 @@ void main() {
 
   group('note list', () {
     testWidgets('displays note title extracted from content', (tester) async {
-      fakeDb._notes.add(_makeNote('Hello World', 'Body content.'));
+      fakeRepo.notes.add(_makeNote('Hello World', 'Body content.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -231,7 +181,7 @@ void main() {
     });
 
     testWidgets('displays snippet on note card', (tester) async {
-      fakeDb._notes.add(_makeNote('Title',
+      fakeRepo.notes.add(_makeNote('Title',
           'First line of content after the heading.'));
 
       await tester.pumpWidget(buildApp());
@@ -243,7 +193,7 @@ void main() {
 
     testWidgets('displays date on note card', (tester) async {
       final date = DateTime(2025, 6, 15, 14, 30);
-      fakeDb._notes.add(_makeNote('Dated Note', 'With date.', date: date));
+      fakeRepo.notes.add(_makeNote('Dated Note', 'With date.', date: date));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -254,7 +204,7 @@ void main() {
     });
 
     testWidgets('displays tag chips on note card', (tester) async {
-      fakeDb._notes.add(
+      fakeRepo.notes.add(
           _makeNote('Tagged', 'Has tags.', tags: const ['#work', '#flutter']));
 
       await tester.pumpWidget(buildApp());
@@ -265,7 +215,7 @@ void main() {
     });
 
     testWidgets('no tag chips when note has no tags', (tester) async {
-      fakeDb._notes.add(_makeNote('Plain', 'No tags.', tags: const []));
+      fakeRepo.notes.add(_makeNote('Plain', 'No tags.', tags: const []));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -278,7 +228,7 @@ void main() {
 
   group('card styling', () {
     testWidgets('note cards have subtle elevation', (tester) async {
-      fakeDb._notes.add(_makeNote('Styled Card', 'Has shadow.'));
+      fakeRepo.notes.add(_makeNote('Styled Card', 'Has shadow.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -301,7 +251,7 @@ void main() {
 
     testWidgets('shows "Today" for notes updated today', (tester) async {
       final today = DateTime.now();
-      fakeDb._notes.add(_makeNote('Fresh Note', 'Just now.', date: today));
+      fakeRepo.notes.add(_makeNote('Fresh Note', 'Just now.', date: today));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -311,7 +261,7 @@ void main() {
 
     testWidgets('shows "Yesterday" for notes updated yesterday', (tester) async {
       final yesterday = DateTime.now().subtract(const Duration(days: 1));
-      fakeDb._notes.add(_makeNote('Day Old', 'From yesterday.', date: yesterday));
+      fakeRepo.notes.add(_makeNote('Day Old', 'From yesterday.', date: yesterday));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -322,7 +272,7 @@ void main() {
     testWidgets('shows "Mon DD" for dates earlier this year', (tester) async {
       // Use a date 3 days ago to avoid Today/Yesterday
       final recent = DateTime.now().subtract(const Duration(days: 3));
-      fakeDb._notes.add(_makeNote('Recent', 'This week.', date: recent));
+      fakeRepo.notes.add(_makeNote('Recent', 'This week.', date: recent));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -336,7 +286,7 @@ void main() {
 
     testWidgets('shows "Mon DD, YYYY" for dates from prior years', (tester) async {
       final oldDate = DateTime(2024, 3, 10);
-      fakeDb._notes.add(_makeNote('Archive', 'Last year.', date: oldDate));
+      fakeRepo.notes.add(_makeNote('Archive', 'Last year.', date: oldDate));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -351,11 +301,11 @@ void main() {
 
   group('sort', () {
     testWidgets('default sort is by date modified descending', (tester) async {
-      fakeDb._notes.add(_makeNote('Oldest', 'Older.',
+      fakeRepo.notes.add(_makeNote('Oldest', 'Older.',
           date: DateTime(2025, 1, 1)));
-      fakeDb._notes.add(_makeNote('Middle', 'Middle.',
+      fakeRepo.notes.add(_makeNote('Middle', 'Middle.',
           date: DateTime(2025, 6, 15)));
-      fakeDb._notes.add(_makeNote('Newest', 'Newest.',
+      fakeRepo.notes.add(_makeNote('Newest', 'Newest.',
           date: DateTime(2025, 12, 31)));
 
       await tester.pumpWidget(buildApp());
@@ -369,10 +319,10 @@ void main() {
     testWidgets('sort by title A-Z reorders notes alphabetically',
         (tester) async {
       final baseDate = DateTime(2025, 1, 1);
-      fakeDb._notes.add(_makeNote('Banana', 'Content.', date: baseDate));
-      fakeDb._notes.add(_makeNote('Apple', 'Content.',
+      fakeRepo.notes.add(_makeNote('Banana', 'Content.', date: baseDate));
+      fakeRepo.notes.add(_makeNote('Apple', 'Content.',
           date: baseDate.add(const Duration(days: 1))));
-      fakeDb._notes.add(_makeNote('Cherry', 'Content.',
+      fakeRepo.notes.add(_makeNote('Cherry', 'Content.',
           date: baseDate.add(const Duration(days: 2))));
 
       await tester.pumpWidget(buildApp());
@@ -399,8 +349,8 @@ void main() {
     testWidgets('sort by title Z-A reorders notes reverse alphabetically',
         (tester) async {
       final baseDate = DateTime(2025, 1, 1);
-      fakeDb._notes.add(_makeNote('Banana', 'Content.', date: baseDate));
-      fakeDb._notes.add(_makeNote('Apple', 'Content.',
+      fakeRepo.notes.add(_makeNote('Banana', 'Content.', date: baseDate));
+      fakeRepo.notes.add(_makeNote('Apple', 'Content.',
           date: baseDate.add(const Duration(days: 1))));
 
       await tester.pumpWidget(buildApp());
@@ -425,11 +375,11 @@ void main() {
   group('filter', () {
     testWidgets('filter by tag shows only notes with that tag',
         (tester) async {
-      fakeDb._notes.add(_makeNote('Work Note', 'Content.',
+      fakeRepo.notes.add(_makeNote('Work Note', 'Content.',
           tags: const ['work']));
-      fakeDb._notes.add(_makeNote('Personal Note', 'Content.',
+      fakeRepo.notes.add(_makeNote('Personal Note', 'Content.',
           tags: const ['personal']));
-      fakeDb._notes.add(_makeNote('Both', 'Content.',
+      fakeRepo.notes.add(_makeNote('Both', 'Content.',
           tags: const ['work', 'personal']));
 
       await tester.pumpWidget(buildApp());
@@ -456,7 +406,7 @@ void main() {
         (tester) async {
       final linkedId = 'linked'.hashCode.toString();
       final noLinkId = 'nolink'.hashCode.toString();
-      fakeDb._notes.add(Note(
+      fakeRepo.notes.add(Note(
         id: linkedId,
         path: 'Linked Note',
         filePath: '',
@@ -465,7 +415,7 @@ void main() {
         content: '# Linked Note\n\nSee [[Target Page]] for more.',
         tags: const [],
       ));
-      fakeDb._notes.add(Note(
+      fakeRepo.notes.add(Note(
         id: noLinkId,
         path: 'Plain Note',
         filePath: '',
@@ -474,7 +424,7 @@ void main() {
         content: '# Plain Note\n\nJust text, no links.',
         tags: const [],
       ));
-      fakeDb.addLinks(linkedId, {'Target Page'});
+      fakeRepo.addLinks(linkedId, {'Target Page'});
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -499,7 +449,7 @@ void main() {
 
   group('swipe', () {
     testWidgets('swipe left on card shows delete confirmation', (tester) async {
-      fakeDb._notes.add(_makeNote('Swipe Me', 'Delete me.'));
+      fakeRepo.notes.add(_makeNote('Swipe Me', 'Delete me.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -517,7 +467,7 @@ void main() {
     });
 
     testWidgets('confirming swipe delete removes note', (tester) async {
-      fakeDb._notes.add(_makeNote('Gone Swipe', 'Will be deleted.'));
+      fakeRepo.notes.add(_makeNote('Gone Swipe', 'Will be deleted.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -536,7 +486,7 @@ void main() {
     });
 
     testWidgets('swipe right pins a note', (tester) async {
-      fakeDb._notes.add(_makeNote('Pin Me', 'Pin this note.'));
+      fakeRepo.notes.add(_makeNote('Pin Me', 'Pin this note.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -554,7 +504,7 @@ void main() {
 
   group('selection mode', () {
     testWidgets('long-press enters selection mode', (tester) async {
-      fakeDb._notes.add(_makeNote('Select Me', 'First note.'));
+      fakeRepo.notes.add(_makeNote('Select Me', 'First note.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -569,8 +519,8 @@ void main() {
 
     testWidgets('tapping another note in selection mode adds it',
         (tester) async {
-      fakeDb._notes.add(_makeNote('First', 'One.'));
-      fakeDb._notes.add(_makeNote('Second', 'Two.'));
+      fakeRepo.notes.add(_makeNote('First', 'One.'));
+      fakeRepo.notes.add(_makeNote('Second', 'Two.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -588,8 +538,8 @@ void main() {
 
     testWidgets('bulk delete in selection mode removes selected notes',
         (tester) async {
-      fakeDb._notes.add(_makeNote('Keep', 'Stay.'));
-      fakeDb._notes.add(_makeNote('Remove', 'Go.'));
+      fakeRepo.notes.add(_makeNote('Keep', 'Stay.'));
+      fakeRepo.notes.add(_makeNote('Remove', 'Go.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -615,8 +565,8 @@ void main() {
 
   group('search filter', () {
     testWidgets('filters notes by content match', (tester) async {
-      fakeDb._notes.add(_makeNote('Alpha', 'Contains unique word xylophone.'));
-      fakeDb._notes.add(_makeNote('Beta', 'Just ordinary.'));
+      fakeRepo.notes.add(_makeNote('Alpha', 'Contains unique word xylophone.'));
+      fakeRepo.notes.add(_makeNote('Beta', 'Just ordinary.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -633,7 +583,7 @@ void main() {
 
     testWidgets('shows no-results message for unmatched search',
         (tester) async {
-      fakeDb._notes.add(_makeNote('Only', 'Nothing here.'));
+      fakeRepo.notes.add(_makeNote('Only', 'Nothing here.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -645,8 +595,8 @@ void main() {
     });
 
     testWidgets('clearing search restores full list', (tester) async {
-      fakeDb._notes.add(_makeNote('A', 'First.'));
-      fakeDb._notes.add(_makeNote('B', 'Second.'));
+      fakeRepo.notes.add(_makeNote('A', 'First.'));
+      fakeRepo.notes.add(_makeNote('B', 'Second.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -667,7 +617,7 @@ void main() {
 
   group('navigation', () {
     testWidgets('tapping a note navigates to editor', (tester) async {
-      fakeDb._notes.add(_makeNote('Navigate Here', 'Tap this note.'));
+      fakeRepo.notes.add(_makeNote('Navigate Here', 'Tap this note.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -683,7 +633,7 @@ void main() {
 
   group('delete', () {
     testWidgets('long-press enters selection mode', (tester) async {
-      fakeDb._notes.add(_makeNote('Delete Me', 'Will be deleted.'));
+      fakeRepo.notes.add(_makeNote('Delete Me', 'Will be deleted.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -698,7 +648,7 @@ void main() {
 
     testWidgets('confirming swipe delete removes note from list',
         (tester) async {
-      fakeDb._notes.add(_makeNote('Gone', 'Will disappear.'));
+      fakeRepo.notes.add(_makeNote('Gone', 'Will disappear.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -720,7 +670,7 @@ void main() {
   group('pull to refresh', () {
     testWidgets('RefreshIndicator is present when notes exist',
         (tester) async {
-      fakeDb._notes.add(_makeNote('Item', 'Content here.'));
+      fakeRepo.notes.add(_makeNote('Item', 'Content here.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -741,9 +691,9 @@ void main() {
 
   group('tag filter banner', () {
     testWidgets('banner shows when tag filter is active', (tester) async {
-      fakeDb._notes.add(_makeNote('Work Note', 'Content.',
+      fakeRepo.notes.add(_makeNote('Work Note', 'Content.',
           tags: const ['work']));
-      fakeDb._notes.add(_makeNote('Other Note', 'Content.',
+      fakeRepo.notes.add(_makeNote('Other Note', 'Content.',
           tags: const ['other']));
 
       await tester.pumpWidget(buildApp());
@@ -764,7 +714,7 @@ void main() {
     });
 
     testWidgets('banner hides when tag filter is cleared', (tester) async {
-      fakeDb._notes.add(_makeNote('Work Note', 'Content.',
+      fakeRepo.notes.add(_makeNote('Work Note', 'Content.',
           tags: const ['work']));
 
       await tester.pumpWidget(buildApp());

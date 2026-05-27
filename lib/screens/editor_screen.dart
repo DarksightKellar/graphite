@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../data/database.dart';
+import '../repository/note_repository.dart';
 import '../models/note.dart';
 import '../widgets/editor_pane.dart';
 import '../widgets/preview_pane.dart';
@@ -20,9 +21,9 @@ import '../widgets/preview_pane.dart';
 /// - Saving/Saved status indicator
 class EditorScreen extends StatefulWidget {
   final String noteId;
-  final GraphiteDB? db;
+  final NoteRepository? repo;
 
-  const EditorScreen({super.key, required this.noteId, this.db});
+  const EditorScreen({super.key, required this.noteId, this.repo});
 
   @override
   State<EditorScreen> createState() => _EditorScreenState();
@@ -31,7 +32,7 @@ class EditorScreen extends StatefulWidget {
 class _EditorScreenState extends State<EditorScreen>
     with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
-  late final GraphiteDB _db;
+  late final NoteRepository _repo;
 
   String? _savedContent;
   Timer? _autoSaveTimer;
@@ -46,7 +47,7 @@ class _EditorScreenState extends State<EditorScreen>
   @override
   void initState() {
     super.initState();
-    _db = widget.db ?? GraphiteDB();
+    _repo = widget.repo ?? NoteRepository(GraphiteDB());
     WidgetsBinding.instance.addObserver(this);
     _loadNote();
   }
@@ -69,8 +70,8 @@ class _EditorScreenState extends State<EditorScreen>
 
   Future<void> _loadNote() async {
     try {
-      await _db.initialize();
-      final note = await _db.readNote(widget.noteId);
+      await _repo.initialize();
+      final note = await _repo.readNote(widget.noteId);
       if (note != null && mounted) {
         _controller.text = note.content;
         _savedContent = note.content;
@@ -100,14 +101,14 @@ class _EditorScreenState extends State<EditorScreen>
     setState(() => _isSaving = true);
     try {
       final content = _controller.text;
-      final existing = await _db.readNote(widget.noteId);
+      final existing = await _repo.readNote(widget.noteId);
       if (existing != null) {
-        await _db.updateNote(existing.copyWith(
+        await _repo.updateNote(existing.copyWith(
           content: content,
           updatedAt: DateTime.now(),
         ));
       } else {
-        await _db.createNote(Note(
+        await _repo.createNote(Note(
           id: widget.noteId,
           path: widget.noteId,
           filePath: widget.noteId,
@@ -117,7 +118,7 @@ class _EditorScreenState extends State<EditorScreen>
           tags: const [],
         ));
       }
-      await _db.extractLinks(widget.noteId, content);
+      await _repo.extractLinks(widget.noteId, content);
       _savedContent = content;
 
       // Show "Saved" indicator briefly
@@ -142,7 +143,7 @@ class _EditorScreenState extends State<EditorScreen>
   }
 
   Future<void> _onLinkTap(String title) async {
-    final note = await _db.findNoteByTitle(title);
+    final note = await _repo.findNoteByTitle(title);
 
     if (!mounted) return;
 
@@ -168,7 +169,7 @@ class _EditorScreenState extends State<EditorScreen>
       );
 
       if (create == true && mounted) {
-        final newNote = await _db.createNote(Note(
+        final newNote = await _repo.createNote(Note(
           id: '',
           path: title,
           filePath: title,

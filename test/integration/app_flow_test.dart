@@ -1,152 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:graphite/data/database.dart';
 import 'package:graphite/models/note.dart';
-import 'package:graphite/models/tag.dart';
 import 'package:graphite/screens/editor_screen.dart';
 import 'package:graphite/screens/home_screen.dart';
 import 'package:graphite/screens/tag_browser_screen.dart';
 import 'package:graphite/widgets/editor_pane.dart';
-
-/// A comprehensive in-memory fake database for integration testing.
-class IntegrationTestFakeDB extends GraphiteDB {
-  final List<Note> _notes = [];
-  final Map<String, List<Map<String, dynamic>>> _links = {};
-
-  @override
-  Future<void> initialize() async {}
-
-  @override
-  Future<Note> createNote(Note note) async {
-    final id = note.path.hashCode.abs().toString();
-    final created = note.copyWith(id: id);
-    _notes.add(created);
-    return created;
-  }
-
-  @override
-  Future<Note?> readNote(String noteId) async {
-    try {
-      return _notes.firstWhere((n) => n.id == noteId);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  @override
-  Future<void> updateNote(Note note) async {
-    final idx = _notes.indexWhere((n) => n.id == note.id);
-    if (idx >= 0) _notes[idx] = note;
-  }
-
-  @override
-  Future<void> deleteNote(String noteId) async {
-    _notes.removeWhere((n) => n.id == noteId);
-    _links.remove(noteId);
-  }
-
-  @override
-  Future<List<Note>> listNotes() async {
-    final sorted = List<Note>.from(_notes);
-    sorted.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    return sorted;
-  }
-
-  @override
-  Future<List<Note>> searchNotes(String query) async {
-    final lower = query.toLowerCase();
-    return _notes
-        .where((n) =>
-            n.content.toLowerCase().contains(lower) ||
-            n.path.toLowerCase().contains(lower))
-        .toList();
-  }
-
-  @override
-  Future<List<Tag>> getAllTags() async {
-    final counts = <String, int>{};
-    for (final note in _notes) {
-      for (final tag in note.tags) {
-        counts[tag] = (counts[tag] ?? 0) + 1;
-      }
-    }
-    return counts.entries
-        .map((e) => Tag(id: e.key, noteCount: e.value))
-        .toList();
-  }
-
-  @override
-  Future<List<Note>> getNotesByTag(String tag) async {
-    return _notes.where((n) => n.tags.contains(tag)).toList();
-  }
-
-  @override
-  Future<void> extractLinks(String noteId, String content) async {
-    _links[noteId] = [];
-    final pattern = RegExp(r'\[\[(.+?)\]\]');
-    for (final match in pattern.allMatches(content)) {
-      final title = match.group(1)!.trim();
-      if (title.isNotEmpty) {
-        _links[noteId]!.add({
-          'from_note_id': noteId,
-          'to_note_title': title,
-        });
-      }
-    }
-  }
-
-  @override
-  Future<List<Map<String, dynamic>>> getOutgoingLinks(String fromNoteId) async =>
-      _links[fromNoteId] ?? [];
-
-  @override
-  Future<int> getLinkCount(String noteId) async =>
-      (_links[noteId]?.length) ?? 0;
-
-  @override
-  Future<List<Note>> getNotesWithLinks() async {
-    final linkedIds =
-        _links.entries.where((e) => e.value.isNotEmpty).map((e) => e.key);
-    return _notes.where((n) => linkedIds.contains(n.id)).toList();
-  }
-
-  @override
-  Future<Note?> findNoteByTitle(String title) async {
-    try {
-      return _notes.firstWhere(
-        (n) => n.path.toLowerCase() == title.toLowerCase(),
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-}
+import '../helpers/fake_note_repository.dart';
 
 /// End-to-end integration tests for Graphite covering 6 core user flows.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  late IntegrationTestFakeDB fakeDb;
+  late FakeNoteRepository fakeRepo;
 
-  setUp(() => fakeDb = IntegrationTestFakeDB());
+  setUp(() => fakeRepo = FakeNoteRepository());
 
   Widget buildApp() => MaterialApp(
-        title: 'Graphite',
-        home: HomeScreen(db: fakeDb),
-        onGenerateRoute: (settings) {
-          if (settings.name == '/tags') {
-            return MaterialPageRoute(
-                builder: (_) => TagBrowserScreen(db: fakeDb));
-          }
-          if (settings.name != null &&
-              settings.name!.startsWith('/editor/')) {
-            final id = settings.name!.split('/').last;
-            return MaterialPageRoute(
-                builder: (_) => EditorScreen(noteId: id, db: fakeDb));
-          }
-          return null;
-        },
-      );
+    title: 'Graphite',
+    home: HomeScreen(repo: fakeRepo),
+    onGenerateRoute: (settings) {
+      if (settings.name == '/tags') {
+        return MaterialPageRoute(
+          builder: (_) => TagBrowserScreen(repo: fakeRepo),
+        );
+      }
+      if (settings.name != null && settings.name!.startsWith('/editor/')) {
+        final id = settings.name!.split('/').last;
+        return MaterialPageRoute(
+          builder: (_) => EditorScreen(noteId: id, repo: fakeRepo),
+        );
+      }
+      return null;
+    },
+  );
 
   Future<void> settle(WidgetTester t) async {
     for (var i = 0; i < 8; i++) {
@@ -173,23 +59,26 @@ void main() {
       content: content,
       tags: tags,
     );
-    return fakeDb.createNote(n);
+    return fakeRepo.createNote(n);
   }
 
   // ═════════════════════════════════════════════════════════════════════
   // Flow 1: First launch → first note
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 1: quick capture → note in list → tap opens editor',
-      (tester) async {
+  testWidgets('Flow 1: quick capture → note in list → tap opens editor', (
+    tester,
+  ) async {
     addTearDown(() => dismissTimers(tester));
 
     await tester.pumpWidget(buildApp());
     await settle(tester);
 
     // Empty state
-    expect(find.text('No notes yet. Tap + to create your first note.'),
-        findsOneWidget);
+    expect(
+      find.text('No notes yet. Tap + to create your first note.'),
+      findsOneWidget,
+    );
 
     // Tap FAB
     await tester.tap(find.byType(FloatingActionButton));
@@ -211,9 +100,10 @@ void main() {
 
     // Navigate to editor by pushing route directly (bypasses
     // InkWell/Dismissible gesture complexity)
-    final notes = await fakeDb.listNotes();
+    final notes = await fakeRepo.listAllNotes();
     final id = notes.first.id;
-    tester.state<NavigatorState>(find.byType(Navigator))
+    tester
+        .state<NavigatorState>(find.byType(Navigator))
         .pushNamed('/editor/$id');
     await settle(tester);
 
@@ -225,8 +115,7 @@ void main() {
   // Flow 2: Edit → save → verify
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 2: edit and auto-save persist via DB only',
-      (tester) async {
+  testWidgets('Flow 2: edit and auto-save persist via DB only', (tester) async {
     addTearDown(() => dismissTimers(tester));
 
     final note = await mkNote(
@@ -239,7 +128,8 @@ void main() {
     expect(find.text('Edit Test'), findsOneWidget);
 
     // Navigate to editor
-    tester.state<NavigatorState>(find.byType(Navigator))
+    tester
+        .state<NavigatorState>(find.byType(Navigator))
         .pushNamed('/editor/${note.id}');
     await settle(tester);
     expect(find.text('Edit Note'), findsOneWidget);
@@ -251,17 +141,14 @@ void main() {
       of: editorPane,
       matching: find.byType(TextField),
     );
-    await tester.enterText(
-      textField,
-      '# Edit Test\n\nUpdated content.',
-    );
+    await tester.enterText(textField, '# Edit Test\n\nUpdated content.');
     await tester.pump();
 
     // Trigger auto-save: pump past the 2-second debounce timer
     await tester.pump(const Duration(seconds: 3));
 
     // Verify persisted in DB via auto-save
-    final reloaded = await fakeDb.readNote(note.id);
+    final reloaded = await fakeRepo.readNote(note.id);
     expect(reloaded!.content, contains('Updated content.'));
   });
 
@@ -269,8 +156,9 @@ void main() {
   // Flow 3: Search
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 3: search filters notes, clear restores all',
-      (tester) async {
+  testWidgets('Flow 3: search filters notes, clear restores all', (
+    tester,
+  ) async {
     addTearDown(() => dismissTimers(tester));
 
     await mkNote(path: 'Alpha', content: '# Alpha\n\nLighthouse keeper logs.');
@@ -307,8 +195,9 @@ void main() {
   // Flow 4: Tag
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 4: tagged note → browse tags → tap tag filters',
-      (tester) async {
+  testWidgets('Flow 4: tagged note → browse tags → tap tag filters', (
+    tester,
+  ) async {
     addTearDown(() => dismissTimers(tester));
 
     await mkNote(
@@ -357,15 +246,16 @@ void main() {
   // Flow 5: Wiki-link
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 5: wiki-link tap prompts create, link navigates',
-      (tester) async {
+  testWidgets('Flow 5: wiki-link tap prompts create, link navigates', (
+    tester,
+  ) async {
     addTearDown(() => dismissTimers(tester));
 
     final noteA = await mkNote(
       path: 'Note A',
       content: '# Note A\n\nSee [[Note B]] for more details.',
     );
-    await fakeDb.extractLinks(noteA.id, noteA.content);
+    await fakeRepo.extractLinks(noteA.id, noteA.content);
 
     await tester.pumpWidget(buildApp());
     await settle(tester);
@@ -395,8 +285,9 @@ void main() {
   // Flow 6: Delete
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 6: long-press delete, confirm, note removed',
-      (tester) async {
+  testWidgets('Flow 6: long-press delete, confirm, note removed', (
+    tester,
+  ) async {
     addTearDown(() => dismissTimers(tester));
 
     await mkNote(
