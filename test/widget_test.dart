@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphite/models/note.dart';
 import 'package:graphite/screens/home_screen.dart';
+import 'package:graphite/usecases/delete_note_use_case.dart';
+import 'package:graphite/usecases/note_list_use_case.dart';
+import 'package:graphite/usecases/quick_note_use_case.dart';
 import 'helpers/fake_note_repository.dart';
 
 /// The welcome note that GraphiteDB._onCreate would seed on first launch.
@@ -32,7 +35,11 @@ void main() {
     // Given: a fresh install with only the welcome note seeded
     final repo = FakeNoteRepository();
     repo.notes.add(_welcomeNote);
-    await tester.pumpWidget(MaterialApp(home: HomeScreen(repo: repo)));
+    await tester.pumpWidget(MaterialApp(home: HomeScreen(
+      noteListUseCase: NoteListUseCase(repo),
+      quickNoteUseCase: QuickNoteUseCase(repo),
+      deleteNoteUseCase: DeleteNoteUseCase(repo),
+    )));
 
     // Allow async init to settle
     await tester.pump();
@@ -52,7 +59,11 @@ void main() {
     WidgetTester tester,
   ) async {
     final repo = FakeNoteRepository();
-    await tester.pumpWidget(MaterialApp(home: HomeScreen(repo: repo)));
+    await tester.pumpWidget(MaterialApp(home: HomeScreen(
+      noteListUseCase: NoteListUseCase(repo),
+      quickNoteUseCase: QuickNoteUseCase(repo),
+      deleteNoteUseCase: DeleteNoteUseCase(repo),
+    )));
 
     await tester.pump();
     await tester.pump();

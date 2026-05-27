@@ -1,8 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import '../data/database.dart';
-import '../repository/note_repository.dart';
+
 import '../data/file_picker.dart';
 import '../models/note.dart';
 import '../usecases/delete_note_use_case.dart';
@@ -18,10 +17,16 @@ enum NoteFilter { allNotes, byTag, withLinks }
 
 /// HomeScreen with quick note capture, file import, and tag navigation.
 class HomeScreen extends StatefulWidget {
-  /// Optional injected repository for testing. When null, creates a real [NoteRepository].
-  final NoteRepository? repo;
+  final NoteListUseCase noteListUseCase;
+  final QuickNoteUseCase quickNoteUseCase;
+  final DeleteNoteUseCase deleteNoteUseCase;
 
-  const HomeScreen({super.key, this.repo});
+  const HomeScreen({
+    super.key,
+    required this.noteListUseCase,
+    required this.quickNoteUseCase,
+    required this.deleteNoteUseCase,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -29,7 +34,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
-  late final NoteRepository _repo;
   late final NoteListUseCase _noteListUseCase;
   late final QuickNoteUseCase _quickNoteUseCase;
   late final DeleteNoteUseCase _deleteNoteUseCase;
@@ -119,10 +123,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _repo = widget.repo ?? NoteRepository(GraphiteDB());
-    _noteListUseCase = NoteListUseCase(_repo);
-    _quickNoteUseCase = QuickNoteUseCase(_repo);
-    _deleteNoteUseCase = DeleteNoteUseCase(_repo);
+    _noteListUseCase = widget.noteListUseCase;
+    _quickNoteUseCase = widget.quickNoteUseCase;
+    _deleteNoteUseCase = widget.deleteNoteUseCase;
     _loadNotes();
   }
 

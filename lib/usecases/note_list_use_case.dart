@@ -1,4 +1,5 @@
 import '../models/note.dart';
+import '../models/tag.dart';
 import '../repository/note_repository.dart';
 
 /// Coordinates note listing, searching, and filtering for the HomeScreen.
@@ -36,5 +37,10 @@ class NoteListUseCase {
   /// Return the number of outgoing wiki-links for a note by [noteId].
   Future<int> linkCount(String noteId) async {
     return _repo.getLinkCount(noteId);
+  }
+
+  /// Get all unique tags across all notes with their note counts.
+  Future<List<Tag>> getAllTags() async {
+    return _repo.getAllTags();
   }
 }

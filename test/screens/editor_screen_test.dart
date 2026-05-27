@@ -2,15 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphite/models/note.dart';
 import 'package:graphite/screens/editor_screen.dart';
+import 'package:graphite/usecases/navigate_link_use_case.dart';
+import 'package:graphite/usecases/save_note_use_case.dart';
 import 'package:graphite/widgets/editor_pane.dart';
 import 'package:graphite/widgets/preview_pane.dart';
 import '../helpers/fake_note_repository.dart';
 
 void main() {
   late FakeNoteRepository fakeRepo;
+  late SaveNoteUseCase saveNoteUseCase;
+  late NavigateLinkUseCase navigateLinkUseCase;
 
   setUp(() {
     fakeRepo = FakeNoteRepository();
+    saveNoteUseCase = SaveNoteUseCase(fakeRepo);
+    navigateLinkUseCase = NavigateLinkUseCase(fakeRepo);
   });
 
   Widget _wrap(EditorScreen screen) {
@@ -63,7 +69,7 @@ void main() {
     testWidgets('renders with existing note content', (tester) async {
       final noteId = _createNote();
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, repo: fakeRepo)));
+      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)));
       await pumpUntilSettled(tester);
 
       expect(find.byType(EditorPane), findsOneWidget);
@@ -74,7 +80,7 @@ void main() {
 
     testWidgets('renders empty for new note (non-existent id)', (tester) async {
       await tester.pumpWidget(_wrap(
-        EditorScreen(noteId: 'new-note-id', repo: fakeRepo),
+        EditorScreen(noteId: 'new-note-id', saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase),
       ));
       await pumpUntilSettled(tester);
 
@@ -90,7 +96,7 @@ void main() {
     testWidgets('typing in editor updates preview content', (tester) async {
       final noteId = _createNote();
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, repo: fakeRepo)));
+      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)));
       await pumpUntilSettled(tester);
 
       final editorPane = find.byType(EditorPane);
@@ -170,7 +176,7 @@ void main() {
         (tester) async {
       final noteId = _createNote();
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, repo: fakeRepo)));
+      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)));
       await pumpUntilSettled(tester);
 
       final editorPane = find.byType(EditorPane);
@@ -208,7 +214,7 @@ void main() {
                     context,
                     MaterialPageRoute(
                       builder: (_) =>
-                          EditorScreen(noteId: noteId, repo: fakeRepo),
+                          EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase),
                     ),
                   );
                 },
@@ -255,7 +261,7 @@ void main() {
         content: '# Link\n\nSee [[OtherPage]] for details.',
       );
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, repo: fakeRepo)));
+      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)));
       await pumpUntilSettled(tester);
 
       expect(find.byType(PreviewPane), findsOneWidget);
@@ -271,7 +277,7 @@ void main() {
         content: '# My Note\n\nContent with #important tag.',
       );
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, repo: fakeRepo)));
+      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)));
       await pumpUntilSettled(tester);
 
       expect(find.byType(PreviewPane), findsOneWidget);

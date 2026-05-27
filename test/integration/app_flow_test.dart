@@ -5,6 +5,11 @@ import 'package:graphite/models/note.dart';
 import 'package:graphite/screens/editor_screen.dart';
 import 'package:graphite/screens/home_screen.dart';
 import 'package:graphite/screens/tag_browser_screen.dart';
+import 'package:graphite/usecases/delete_note_use_case.dart';
+import 'package:graphite/usecases/navigate_link_use_case.dart';
+import 'package:graphite/usecases/note_list_use_case.dart';
+import 'package:graphite/usecases/quick_note_use_case.dart';
+import 'package:graphite/usecases/save_note_use_case.dart';
 import 'package:graphite/widgets/editor_pane.dart';
 import '../helpers/fake_note_repository.dart';
 
@@ -12,22 +17,42 @@ import '../helpers/fake_note_repository.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late FakeNoteRepository fakeRepo;
+  late NoteListUseCase noteListUseCase;
+  late QuickNoteUseCase quickNoteUseCase;
+  late DeleteNoteUseCase deleteNoteUseCase;
+  late SaveNoteUseCase saveNoteUseCase;
+  late NavigateLinkUseCase navigateLinkUseCase;
 
-  setUp(() => fakeRepo = FakeNoteRepository());
+  setUp(() {
+    fakeRepo = FakeNoteRepository();
+    noteListUseCase = NoteListUseCase(fakeRepo);
+    quickNoteUseCase = QuickNoteUseCase(fakeRepo);
+    deleteNoteUseCase = DeleteNoteUseCase(fakeRepo);
+    saveNoteUseCase = SaveNoteUseCase(fakeRepo);
+    navigateLinkUseCase = NavigateLinkUseCase(fakeRepo);
+  });
 
   Widget buildApp() => MaterialApp(
     title: 'Graphite',
-    home: HomeScreen(repo: fakeRepo),
+    home: HomeScreen(
+      noteListUseCase: noteListUseCase,
+      quickNoteUseCase: quickNoteUseCase,
+      deleteNoteUseCase: deleteNoteUseCase,
+    ),
     onGenerateRoute: (settings) {
       if (settings.name == '/tags') {
         return MaterialPageRoute(
-          builder: (_) => TagBrowserScreen(repo: fakeRepo),
+          builder: (_) => TagBrowserScreen(noteListUseCase: noteListUseCase),
         );
       }
       if (settings.name != null && settings.name!.startsWith('/editor/')) {
         final id = settings.name!.split('/').last;
         return MaterialPageRoute(
-          builder: (_) => EditorScreen(noteId: id, repo: fakeRepo),
+          builder: (_) => EditorScreen(
+            noteId: id,
+            saveNoteUseCase: saveNoteUseCase,
+            navigateLinkUseCase: navigateLinkUseCase,
+          ),
         );
       }
       return null;

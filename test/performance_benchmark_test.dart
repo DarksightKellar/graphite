@@ -7,6 +7,11 @@ import 'package:graphite/models/note.dart';
 import 'package:graphite/repository/note_repository.dart';
 import 'package:graphite/screens/editor_screen.dart';
 import 'package:graphite/screens/home_screen.dart';
+import 'package:graphite/usecases/delete_note_use_case.dart';
+import 'package:graphite/usecases/navigate_link_use_case.dart';
+import 'package:graphite/usecases/note_list_use_case.dart';
+import 'package:graphite/usecases/quick_note_use_case.dart';
+import 'package:graphite/usecases/save_note_use_case.dart';
 import 'package:graphite/widgets/editor_pane.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -143,7 +148,11 @@ void main() {
           final sw = Stopwatch()..start();
           await tester.pumpWidget(
             MaterialApp(
-              home: EditorScreen(noteId: _noteId),
+              home: EditorScreen(
+                noteId: _noteId,
+                saveNoteUseCase: SaveNoteUseCase(NoteRepository(db)),
+                navigateLinkUseCase: NavigateLinkUseCase(NoteRepository(db)),
+              ),
             ),
           );
           // Wait for load to complete
@@ -165,7 +174,11 @@ void main() {
       final sw = Stopwatch()..start();
       await tester.pumpWidget(
         MaterialApp(
-          home: HomeScreen(repo: NoteRepository(db)),
+          home: HomeScreen(
+            noteListUseCase: NoteListUseCase(NoteRepository(db)),
+            quickNoteUseCase: QuickNoteUseCase(NoteRepository(db)),
+            deleteNoteUseCase: DeleteNoteUseCase(NoteRepository(db)),
+          ),
         ),
       );
       // Wait for async data load
@@ -196,14 +209,18 @@ void main() {
           filePath: '$title.md',
           createdAt: DateTime.now().subtract(Duration(days: 500 - i)),
           updatedAt: DateTime.now().subtract(Duration(minutes: i)),
-          content: '# $title\n\n$content',
+          content: '# $title\\n\\n$content',
           tags: i % 5 == 0 ? ['scroll-test'] : [],
         ));
       }
 
       await tester.pumpWidget(
         MaterialApp(
-          home: HomeScreen(repo: NoteRepository(db)),
+          home: HomeScreen(
+            noteListUseCase: NoteListUseCase(NoteRepository(db)),
+            quickNoteUseCase: QuickNoteUseCase(NoteRepository(db)),
+            deleteNoteUseCase: DeleteNoteUseCase(NoteRepository(db)),
+          ),
         ),
       );
       await tester.pumpAndSettle(const Duration(seconds: 30));

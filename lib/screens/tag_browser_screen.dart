@@ -1,34 +1,32 @@
 import 'package:flutter/material.dart';
-import '../data/database.dart';
 import '../models/tag.dart';
-import '../repository/note_repository.dart';
+import '../usecases/note_list_use_case.dart';
 
 /// TagBrowserScreen — lists all tags with note counts, tappable to filter.
 class TagBrowserScreen extends StatefulWidget {
-  /// Optional injected repository for testing. When null, creates a real [NoteRepository].
-  final NoteRepository? repo;
+  final NoteListUseCase noteListUseCase;
 
-  const TagBrowserScreen({super.key, this.repo});
+  const TagBrowserScreen({super.key, required this.noteListUseCase});
 
   @override
   State<TagBrowserScreen> createState() => _TagBrowserScreenState();
 }
 
 class _TagBrowserScreenState extends State<TagBrowserScreen> {
-  late final NoteRepository _repo;
+  late final NoteListUseCase _noteListUseCase;
   List<Tag> _tags = [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _repo = widget.repo ?? NoteRepository(GraphiteDB());
+    _noteListUseCase = widget.noteListUseCase;
     _loadTags();
   }
 
   Future<void> _loadTags() async {
     try {
-      final tags = await _repo.getAllTags();
+      final tags = await _noteListUseCase.getAllTags();
       if (!mounted) return;
       setState(() {
         _tags = tags;

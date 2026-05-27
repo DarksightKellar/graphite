@@ -87,5 +87,33 @@ void main() {
       final linkCount = await repo.getLinkCount('note-links');
       expect(linkCount, 2);
     });
+
+    test('initialize delegates to repository', () async {
+      expect(repo.initialized, isFalse);
+      await useCase.initialize();
+      expect(repo.initialized, isTrue);
+    });
+
+    test('readNote delegates to repository', () async {
+      final note = Note(
+        id: 'read-test',
+        path: 'read-test',
+        filePath: 'read-test',
+        createdAt: DateTime(2025, 1, 1),
+        updatedAt: DateTime(2025, 1, 1),
+        content: '# Read Test',
+        tags: const [],
+      );
+      repo.notes.add(note);
+
+      final result = await useCase.readNote('read-test');
+      expect(result, isNotNull);
+      expect(result!.id, 'read-test');
+      expect(result.content, '# Read Test');
+
+      // Non-existent note returns null
+      final missing = await useCase.readNote('nonexistent');
+      expect(missing, isNull);
+    });
   });
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'di/injection.dart';
 import 'router/app_router.dart';
 
 /// Main entry point for Graphite app.
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  configureDependencies();
   runApp(const GraphiteApp());
 }
 

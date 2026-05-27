@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphite/models/note.dart';
 import 'package:graphite/screens/home_screen.dart';
+import 'package:graphite/usecases/delete_note_use_case.dart';
+import 'package:graphite/usecases/note_list_use_case.dart';
+import 'package:graphite/usecases/quick_note_use_case.dart';
 import '../helpers/fake_note_repository.dart';
 
 /// Widget tests for HomeScreen.
@@ -11,14 +14,24 @@ import '../helpers/fake_note_repository.dart';
 /// tap-to-navigate.
 void main() {
   late FakeNoteRepository fakeRepo;
+  late NoteListUseCase noteListUseCase;
+  late QuickNoteUseCase quickNoteUseCase;
+  late DeleteNoteUseCase deleteNoteUseCase;
 
   setUp(() {
     fakeRepo = FakeNoteRepository();
+    noteListUseCase = NoteListUseCase(fakeRepo);
+    quickNoteUseCase = QuickNoteUseCase(fakeRepo);
+    deleteNoteUseCase = DeleteNoteUseCase(fakeRepo);
   });
 
   Widget buildApp() {
     return MaterialApp(
-      home: HomeScreen(repo: fakeRepo),
+      home: HomeScreen(
+        noteListUseCase: noteListUseCase,
+        quickNoteUseCase: quickNoteUseCase,
+        deleteNoteUseCase: deleteNoteUseCase,
+      ),
       onGenerateRoute: (settings) {
         if (settings.name == '/tags') {
           return MaterialPageRoute(

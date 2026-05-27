@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphite/models/note.dart';
 import 'package:graphite/screens/tag_browser_screen.dart';
+import 'package:graphite/usecases/note_list_use_case.dart';
 import '../helpers/fake_note_repository.dart';
 
 void main() {
   late FakeNoteRepository fakeRepo;
+  late NoteListUseCase noteListUseCase;
 
   setUp(() {
     fakeRepo = FakeNoteRepository();
+    noteListUseCase = NoteListUseCase(fakeRepo);
   });
 
   Widget _wrap(Widget child) {
@@ -41,7 +44,7 @@ void main() {
       ));
 
       await tester.pumpWidget(
-          _wrap(TagBrowserScreen(repo: fakeRepo)));
+          _wrap(TagBrowserScreen(noteListUseCase: noteListUseCase)));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -74,7 +77,8 @@ void main() {
                   Navigator.push<String>(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => TagBrowserScreen(repo: fakeRepo)),
+                        builder: (_) => TagBrowserScreen(
+                            noteListUseCase: noteListUseCase)),
                   );
                 },
                 child: const Text('Open Tags'),
@@ -107,7 +111,7 @@ void main() {
     testWidgets('shows empty state when no tags exist', (tester) async {
       // No notes = no tags
       await tester.pumpWidget(
-          _wrap(TagBrowserScreen(repo: fakeRepo)));
+          _wrap(TagBrowserScreen(noteListUseCase: noteListUseCase)));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 

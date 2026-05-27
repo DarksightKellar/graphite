@@ -202,5 +202,36 @@ void main() {
         expect(count, 0);
       });
     });
+
+    group('getAllTags', () {
+      test('returns all unique tags with note counts', () async {
+        // Arrange
+        repo.notes.addAll([
+          _makeNote(id: '1', path: 'one', tags: ['dart', 'flutter']),
+          _makeNote(id: '2', path: 'two', tags: ['dart']),
+          _makeNote(id: '3', path: 'three', tags: ['testing']),
+        ]);
+
+        // Act
+        final result = await useCase.getAllTags();
+
+        // Assert
+        expect(result, hasLength(3));
+        final dartTag = result.firstWhere((t) => t.id == 'dart');
+        expect(dartTag.noteCount, 2);
+        final flutterTag = result.firstWhere((t) => t.id == 'flutter');
+        expect(flutterTag.noteCount, 1);
+        final testingTag = result.firstWhere((t) => t.id == 'testing');
+        expect(testingTag.noteCount, 1);
+      });
+
+      test('returns empty list when no notes exist', () async {
+        // Act
+        final result = await useCase.getAllTags();
+
+        // Assert
+        expect(result, isEmpty);
+      });
+    });
   });
 }

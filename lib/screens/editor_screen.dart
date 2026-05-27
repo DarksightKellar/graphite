@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../data/database.dart';
-import '../repository/note_repository.dart';
 import '../models/note.dart';
 import '../usecases/save_note_use_case.dart';
 import '../usecases/navigate_link_use_case.dart';
@@ -23,9 +21,15 @@ import '../widgets/preview_pane.dart';
 /// - Saving/Saved status indicator
 class EditorScreen extends StatefulWidget {
   final String noteId;
-  final NoteRepository? repo;
+  final SaveNoteUseCase saveNoteUseCase;
+  final NavigateLinkUseCase navigateLinkUseCase;
 
-  const EditorScreen({super.key, required this.noteId, this.repo});
+  const EditorScreen({
+    super.key,
+    required this.noteId,
+    required this.saveNoteUseCase,
+    required this.navigateLinkUseCase,
+  });
 
   @override
   State<EditorScreen> createState() => _EditorScreenState();
@@ -34,7 +38,6 @@ class EditorScreen extends StatefulWidget {
 class _EditorScreenState extends State<EditorScreen>
     with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
-  late final NoteRepository _repo;
   late final SaveNoteUseCase _saveNoteUseCase;
   late final NavigateLinkUseCase _navigateLinkUseCase;
 
@@ -51,9 +54,8 @@ class _EditorScreenState extends State<EditorScreen>
   @override
   void initState() {
     super.initState();
-    _repo = widget.repo ?? NoteRepository(GraphiteDB());
-    _saveNoteUseCase = SaveNoteUseCase(_repo);
-    _navigateLinkUseCase = NavigateLinkUseCase(_repo);
+    _saveNoteUseCase = widget.saveNoteUseCase;
+    _navigateLinkUseCase = widget.navigateLinkUseCase;
     WidgetsBinding.instance.addObserver(this);
     _loadNote();
   }
@@ -76,8 +78,8 @@ class _EditorScreenState extends State<EditorScreen>
 
   Future<void> _loadNote() async {
     try {
-      await _repo.initialize();
-      final note = await _repo.readNote(widget.noteId);
+      await _saveNoteUseCase.initialize();
+      final note = await _saveNoteUseCase.readNote(widget.noteId);
       if (note != null && mounted) {
         _controller.text = note.content;
         _savedContent = note.content;

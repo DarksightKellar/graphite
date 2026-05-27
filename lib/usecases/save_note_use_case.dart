@@ -8,6 +8,16 @@ class SaveNoteUseCase {
 
   SaveNoteUseCase(this._repo);
 
+  /// Initialize the underlying database (idempotent).
+  Future<void> initialize() async {
+    await _repo.initialize();
+  }
+
+  /// Read a note by its id. Returns `null` if not found.
+  Future<Note?> readNote(String id) async {
+    return _repo.readNote(id);
+  }
+
   /// Saves [content] for the note identified by [noteId].
   ///
   /// If the note already exists, it is updated in place preserving its

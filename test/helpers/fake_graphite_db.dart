@@ -7,9 +7,15 @@ import 'package:graphite/models/tag.dart';
 class FakeGraphiteDB extends GraphiteDB {
   final List<Note> notes = [];
   final Map<String, Set<String>> _links = {}; // noteId -> set of link targets
+  bool _initialized = false;
+
+  /// Whether [initialize] has been called.
+  bool get initialized => _initialized;
 
   @override
-  Future<void> initialize() async {}
+  Future<void> initialize() async {
+    _initialized = true;
+  }
 
   @override
   Future<List<Note>> listNotes() async => List.unmodifiable(notes);

@@ -22,6 +22,9 @@ class FakeNoteRepository extends NoteRepository {
   /// Direct access to the underlying notes list for test setup/assertion.
   List<Note> get notes => fakeDb.notes;
 
+  /// Whether [initialize] has been called on the underlying database.
+  bool get initialized => fakeDb.initialized;
+
   /// Inject links for testing.
   void addLinks(String noteId, Set<String> targets) {
     fakeDb.addLinks(noteId, targets);
