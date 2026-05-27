@@ -11,7 +11,7 @@ class FileSystem {
     await for (final entity in directory.list(recursive: true, followLinks: false)) {
       entities.add(entity);
     }
-    return entities.where((e) => e is File).toList();
+    return entities.whereType<File>().toList();
   }
 
   /// Read file as string

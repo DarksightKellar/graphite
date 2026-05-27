@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../models/note.dart';
+import 'package:go_router/go_router.dart';
 import '../usecases/save_note_use_case.dart';
 import '../usecases/navigate_link_use_case.dart';
 import '../widgets/editor_pane.dart';
@@ -137,7 +137,7 @@ class _EditorScreenState extends State<EditorScreen>
     // First find existing
     final note = await _navigateLinkUseCase.find(title);
     if (note != null) {
-      if (mounted) Navigator.pushNamed(context, '/editor/${note.id}');
+      if (mounted) context.push('/editor/${note.id}');
       return;
     }
     // Not found — show "Create?" dialog
@@ -161,7 +161,7 @@ class _EditorScreenState extends State<EditorScreen>
     );
     if (create == true && mounted) {
       final newNote = await _navigateLinkUseCase.create(title);
-      if (mounted) Navigator.pushNamed(context, '/editor/${newNote.id}');
+      if (mounted) context.push('/editor/${newNote.id}');
     }
   }
 

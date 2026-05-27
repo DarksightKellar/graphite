@@ -1,14 +1,14 @@
 # Standard Flutter ignore
 .flutter-plugins
-.pub-cache#
-.dart_tool#
+.pub-cache/*
+.dart_tool/*
 build/
 *.hprof
 
 # Code analysis
 dartpad/
 .flutter-plugins
-.dart_tool#
+.dart_tool/*
 .build/
 .packages
 
@@ -17,7 +17,6 @@ dartpad/
 .vscode/
 *.swp
 *.swo
-*~
 .DS_Store
 
 # Local notes database (SQLite)

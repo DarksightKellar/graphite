@@ -64,7 +64,8 @@ Future<Database> createDb(String path) async {
   return db;
 }
 
-Future<void> insertNote(Database db, {
+Future<void> insertNote(
+  Database db, {
   required String title,
   required int createdAt,
   required int updatedAt,
@@ -108,9 +109,7 @@ Future<void> main() async {
   final batch = <Map<String, dynamic>>[];
   for (var i = 0; i < 500; i++) {
     final title = 'Note ${i.toString().padLeft(4, '0')}';
-    final content = String.fromCharCodes(
-      List.generate(200, (_) => rng.nextInt(26) + 97),
-    );
+    final content = String.fromCharCodes(List.generate(200, (_) => rng.nextInt(26) + 97));
     batch.add({
       'id': hashFilename(title),
       'path': title,
@@ -159,7 +158,7 @@ Future<void> main() async {
   // ── Summary ───────────────────────────────────────────────
   print('');
   print('=== Results ===');
-  print('Cold start: ${coldResult} (${coldMs}ms / <2000ms)');
+  print('Cold start: $coldResult (${coldMs}ms / <2000ms)');
   print('Search (500): ${searchMs < 500 ? 'PASS' : 'FAIL'} (${searchMs}ms / <500ms)');
   print('');
 

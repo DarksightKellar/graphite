@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../data/file_picker.dart';
 import '../models/note.dart';
@@ -672,7 +673,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             if (isPinned)
                               Padding(
-                                padding: EdgeInsets.only(left: 4),
+                                padding: const EdgeInsets.only(left: 4),
                                 child: Icon(
                                   Icons.push_pin,
                                   size: 14,
@@ -766,7 +767,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             visualDensity: VisualDensity.compact,
                           ),
                         )
-                        .toList(),
+                        ,
                   ],
                 ),
               ],
@@ -804,13 +805,13 @@ class _HomeScreenState extends State<HomeScreen> {
             'Quick note captured at ${DateTime.now()}.',
           );
           if (!mounted) return;
-          Navigator.pushNamed(context, '/editor/${created.id}');
+          context.push('/editor/${created.id}');
 
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Note created'),
-              duration: Duration(seconds: 1),
+              content: const Text('Note created'),
+              duration: const Duration(seconds: 1),
               backgroundColor: Theme.of(context).colorScheme.tertiary,
             ),
           );
@@ -843,13 +844,13 @@ class _HomeScreenState extends State<HomeScreen> {
         );
 
         if (!mounted) return;
-        Navigator.pushNamed(context, '/editor/${created.id}');
+        context.push('/editor/${created.id}');
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Note imported successfully'),
-            duration: Duration(seconds: 1),
+            content: const Text('Note imported successfully'),
+            duration: const Duration(seconds: 1),
             backgroundColor: Theme.of(context).colorScheme.tertiary,
           ),
         );
@@ -864,7 +865,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _navigateToTags() async {
-    final tag = await Navigator.pushNamed(context, '/tags');
+    final tag = await context.push<String>('/tags');
     if (tag != null && tag is String && mounted) {
       filterByTag(tag);
     }
@@ -872,7 +873,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _openNote(Note note) {
     if (note.id.isNotEmpty) {
-      Navigator.pushNamed(context, '/editor/${note.id}');
+      context.push('/editor/${note.id}');
     }
   }
 

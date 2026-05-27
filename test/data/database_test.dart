@@ -38,7 +38,7 @@ void main() {
     } catch (_) {}
   });
 
-  Note _testNote(
+  Note testNote(
     String path,
     String content, {
     List<String> tags = const [],
@@ -58,7 +58,7 @@ void main() {
 
   group('Tag extraction on createNote', () {
     test('extracts #tags from content and stores them', () async {
-      final note = await db.createNote(_testNote(
+      final note = await db.createNote(testNote(
         'tagged',
         '# My Note\n\nThis is about #work and #personal stuff.',
         tags: ['#work', '#personal'],
@@ -70,7 +70,7 @@ void main() {
     });
 
     test('stores empty tags for content without hashtags', () async {
-      final note = await db.createNote(_testNote(
+      final note = await db.createNote(testNote(
         'notags',
         '# Plain note\n\nNo hashtags here.',
       ));
@@ -83,12 +83,12 @@ void main() {
 
   group('Tag querying', () {
     test('getAllTags returns unique tags with counts', () async {
-      await db.createNote(_testNote('a', '#work stuff', tags: ['#work']));
-      await db.createNote(_testNote(
+      await db.createNote(testNote('a', '#work stuff', tags: ['#work']));
+      await db.createNote(testNote(
         'b', 'More #work and #personal',
         tags: ['#work', '#personal'],
       ));
-      await db.createNote(_testNote('c', '#personal journal', tags: ['#personal']));
+      await db.createNote(testNote('c', '#personal journal', tags: ['#personal']));
 
       final tags = await db.getAllTags();
       expect(tags.length, equals(2));
@@ -100,16 +100,16 @@ void main() {
     });
 
     test('getAllTags returns empty for no tags', () async {
-      await db.createNote(_testNote('plain', 'No tags'));
+      await db.createNote(testNote('plain', 'No tags'));
 
       final tags = await db.getAllTags();
       expect(tags, isEmpty);
     });
 
     test('getNotesByTag returns only notes with that tag', () async {
-      await db.createNote(_testNote('work', '#work stuff', tags: ['#work']));
-      await db.createNote(_testNote('personal', '#personal journal', tags: ['#personal']));
-      await db.createNote(_testNote('both', '#work #personal', tags: ['#work', '#personal']));
+      await db.createNote(testNote('work', '#work stuff', tags: ['#work']));
+      await db.createNote(testNote('personal', '#personal journal', tags: ['#personal']));
+      await db.createNote(testNote('both', '#work #personal', tags: ['#work', '#personal']));
 
       final workNotes = await db.getNotesByTag('#work');
       expect(workNotes.length, equals(2));
@@ -118,7 +118,7 @@ void main() {
     });
 
     test('getNotesByTag returns empty for unused tag', () async {
-      await db.createNote(_testNote('only', 'Just #here', tags: ['#here']));
+      await db.createNote(testNote('only', 'Just #here', tags: ['#here']));
 
       final results = await db.getNotesByTag('#nowhere');
       expect(results, isEmpty);
@@ -127,7 +127,7 @@ void main() {
 
   group('Tag update on updateNote', () {
     test('updating note content updates its tags', () async {
-      final note = await db.createNote(_testNote(
+      final note = await db.createNote(testNote(
         'change', 'Initial #old-tag',
         tags: ['#old-tag'],
       ));
@@ -147,14 +147,14 @@ void main() {
 
   group('searchNotes', () {
     test('returns empty list when no notes match query', () async {
-      await db.createNote(_testNote('alpha', '# Alpha'));
+      await db.createNote(testNote('alpha', '# Alpha'));
       final results = await db.searchNotes('nonexistent');
       expect(results, isEmpty);
     });
 
     test('finds note by content match', () async {
-      await db.createNote(_testNote('alpha', '# Getting Started\n\nLearn Graphite.'));
-      await db.createNote(_testNote('beta', '# Project Ideas\n\nBuild a mobile app.'));
+      await db.createNote(testNote('alpha', '# Getting Started\n\nLearn Graphite.'));
+      await db.createNote(testNote('beta', '# Project Ideas\n\nBuild a mobile app.'));
 
       final results = await db.searchNotes('graphite');
       expect(results.length, equals(1));
@@ -162,8 +162,8 @@ void main() {
     });
 
     test('finds note by path match', () async {
-      await db.createNote(_testNote('alpha', '# Alpha'));
-      await db.createNote(_testNote('projects', '# Projects'));
+      await db.createNote(testNote('alpha', '# Alpha'));
+      await db.createNote(testNote('projects', '# Projects'));
 
       final results = await db.searchNotes('projects');
       expect(results.length, equals(1));
@@ -171,9 +171,9 @@ void main() {
     });
 
     test('finds notes matching either content or path (OR semantics)', () async {
-      await db.createNote(_testNote('alpha', '# Alpha\n\nThis is about projects.'));
-      await db.createNote(_testNote('projects', '# Projects\n\nProject tracking.'));
-      await db.createNote(_testNote('journal', '# Journal\n\nDaily log.'));
+      await db.createNote(testNote('alpha', '# Alpha\n\nThis is about projects.'));
+      await db.createNote(testNote('projects', '# Projects\n\nProject tracking.'));
+      await db.createNote(testNote('journal', '# Journal\n\nDaily log.'));
 
       final results = await db.searchNotes('projects');
       expect(results.length, equals(2));
@@ -182,7 +182,7 @@ void main() {
     });
 
     test('case-insensitive matching', () async {
-      await db.createNote(_testNote('note', '# Work Log\n\nImportant notes.'));
+      await db.createNote(testNote('note', '# Work Log\n\nImportant notes.'));
 
       expect((await db.searchNotes('work')).length, equals(1));
       expect((await db.searchNotes('WORK')).length, equals(1));
@@ -190,11 +190,11 @@ void main() {
     });
 
     test('returns results ordered by updatedAt DESC', () async {
-      await db.createNote(_testNote('old', '# Old Note',
+      await db.createNote(testNote('old', '# Old Note',
           updatedAt: DateTime.now().subtract(const Duration(minutes: 10))));
-      await db.createNote(_testNote('mid', '# Mid Note',
+      await db.createNote(testNote('mid', '# Mid Note',
           updatedAt: DateTime.now().subtract(const Duration(minutes: 5))));
-      final recent = await db.createNote(_testNote('new', '# New Note',
+      final recent = await db.createNote(testNote('new', '# New Note',
           updatedAt: DateTime.now()));
 
       await db.updateNote(recent.copyWith(
@@ -210,7 +210,7 @@ void main() {
     test('limits results to 50', () async {
       for (var i = 0; i < 55; i++) {
         final padded = i.toString().padLeft(3, '0');
-        await db.createNote(_testNote('note$padded', '# Note $i\n\nContent for note $i.'));
+        await db.createNote(testNote('note$padded', '# Note $i\n\nContent for note $i.'));
       }
 
       final results = await db.searchNotes('note');
@@ -218,26 +218,26 @@ void main() {
     });
 
     test('partial substring matching within content', () async {
-      await db.createNote(_testNote('guide', '# Setup Guide\n\nInstall Graphite on your device.'));
+      await db.createNote(testNote('guide', '# Setup Guide\n\nInstall Graphite on your device.'));
       final results = await db.searchNotes('graph');
       expect(results.length, equals(1));
     });
 
     test('empty query returns all notes', () async {
-      await db.createNote(_testNote('a', '# A'));
-      await db.createNote(_testNote('b', '# B'));
+      await db.createNote(testNote('a', '# A'));
+      await db.createNote(testNote('b', '# B'));
       expect((await db.searchNotes('')).length, equals(2));
     });
 
     test('special characters in query handled safely', () async {
-      await db.createNote(_testNote('specials', '# Hashtags\\n\\nUsing #tags and @people.'));
+      await db.createNote(testNote('specials', '# Hashtags\\n\\nUsing #tags and @people.'));
       expect((await db.searchNotes('#tags')).length, equals(1));
     });
   });
 
   group('createNote', () {
     test('persists note and returns it with an id', () async {
-      final note = _testNote('note', '# Test');
+      final note = testNote('note', '# Test');
       final created = await db.createNote(note);
 
       expect(created.id, isNotEmpty);
@@ -246,18 +246,18 @@ void main() {
     });
 
     test('generates unique ids for different notes', () async {
-      final a = await db.createNote(_testNote('alpha', 'A'));
-      final b = await db.createNote(_testNote('beta', 'B'));
+      final a = await db.createNote(testNote('alpha', 'A'));
+      final b = await db.createNote(testNote('beta', 'B'));
 
       expect(a.id, isNot(equals(b.id)));
     });
 
     test('generates deterministic ids for same path', () async {
       // Delete the first inserted note so UNIQUE constraint doesn't hit
-      final first = await db.createNote(_testNote('same', 'First'));
+      final first = await db.createNote(testNote('same', 'First'));
       await db.deleteNote(first.id);
 
-      final second = await db.createNote(_testNote('same', 'Second'));
+      final second = await db.createNote(testNote('same', 'Second'));
       expect(second.id, equals(first.id));
     });
   });
@@ -265,7 +265,7 @@ void main() {
   group('readNote', () {
     test('returns note when it exists', () async {
       final created = await db.createNote(
-        _testNote('note', '# Test', tags: ['test']),
+        testNote('note', '# Test', tags: ['test']),
       );
 
       final read = await db.readNote(created.id);
@@ -284,7 +284,7 @@ void main() {
 
   group('updateNote', () {
     test('changes note content and metadata', () async {
-      final created = await db.createNote(_testNote('note', '# Original'));
+      final created = await db.createNote(testNote('note', '# Original'));
 
       final updated = created.copyWith(
         content: '# Updated',
@@ -316,7 +316,7 @@ void main() {
 
   group('deleteNote', () {
     test('removes note from database', () async {
-      final created = await db.createNote(_testNote('temp', '# To delete'));
+      final created = await db.createNote(testNote('temp', '# To delete'));
 
       await db.deleteNote(created.id);
 
@@ -337,11 +337,11 @@ void main() {
     });
 
     test('returns all notes ordered by updatedAt DESC', () async {
-      await db.createNote(_testNote('oldest', 'Old',
+      await db.createNote(testNote('oldest', 'Old',
           updatedAt: DateTime.now().subtract(const Duration(minutes: 10))));
-      await db.createNote(_testNote('middle', 'Mid',
+      await db.createNote(testNote('middle', 'Mid',
           updatedAt: DateTime.now().subtract(const Duration(minutes: 5))));
-      await db.createNote(_testNote('newest', 'New',
+      await db.createNote(testNote('newest', 'New',
           updatedAt: DateTime.now()));
 
       final notes = await db.listNotes();
@@ -353,7 +353,7 @@ void main() {
 
     test('returns full Note objects with all fields populated', () async {
       await db.createNote(
-        _testNote('full', '# Full Note', tags: ['a', 'b']),
+        testNote('full', '# Full Note', tags: ['a', 'b']),
       );
 
       final notes = await db.listNotes();
@@ -372,7 +372,7 @@ void main() {
 
   group('Edge cases', () {
     test('creates note with empty content', () async {
-      final note = await db.createNote(_testNote('empty', ''));
+      final note = await db.createNote(testNote('empty', ''));
 
       final read = await db.readNote(note.id);
       expect(read, isNotNull);
@@ -381,7 +381,7 @@ void main() {
 
     test('creates note with Unicode content', () async {
       final note = await db.createNote(
-        _testNote('unicode', 'こんにちは世界 🎉 café'),
+        testNote('unicode', 'こんにちは世界 🎉 café'),
       );
 
       final read = await db.readNote(note.id);
@@ -391,7 +391,7 @@ void main() {
 
     test('creates note with very long content', () async {
       final longContent = 'x' * 5000;
-      final note = await db.createNote(_testNote('long', longContent));
+      final note = await db.createNote(testNote('long', longContent));
 
       final read = await db.readNote(note.id);
       expect(read, isNotNull);
@@ -400,7 +400,7 @@ void main() {
 
     test('updating note with empty content', () async {
       final created = await db.createNote(
-        _testNote('to-empty', 'Original content'),
+        testNote('to-empty', 'Original content'),
       );
 
       final updated = created.copyWith(
@@ -415,7 +415,7 @@ void main() {
     });
 
     test('read after delete returns null', () async {
-      final created = await db.createNote(_testNote('gone', 'Temporary'));
+      final created = await db.createNote(testNote('gone', 'Temporary'));
 
       await db.deleteNote(created.id);
 
@@ -427,9 +427,9 @@ void main() {
     });
 
     test('listNotes respects order after update', () async {
-      final a = await db.createNote(_testNote('a', 'A',
+      final a = await db.createNote(testNote('a', 'A',
           updatedAt: DateTime.now().subtract(const Duration(minutes: 10))));
-      await db.createNote(_testNote('b', 'B',
+      await db.createNote(testNote('b', 'B',
           updatedAt: DateTime.now().subtract(const Duration(minutes: 5))));
 
       // Update note A so it becomes the most recent
@@ -444,7 +444,7 @@ void main() {
     });
 
     test('search handles empty content note', () async {
-      await db.createNote(_testNote('empty', ''));
+      await db.createNote(testNote('empty', ''));
 
       // Empty query returns all notes
       final results = await db.searchNotes('');
@@ -452,7 +452,7 @@ void main() {
     });
 
     test('search handles special regex characters safely', () async {
-      await db.createNote(_testNote('specials',
+      await db.createNote(testNote('specials',
           'Testing (parentheses) and [brackets] and \$dollar signs.'));
 
       final results = await db.searchNotes('(parentheses)');
@@ -460,7 +460,7 @@ void main() {
     });
 
     test('getAllTags with Unicode tag content', () async {
-      await db.createNote(_testNote('uni',
+      await db.createNote(testNote('uni',
           '#テスト #日本語',
           tags: ['テスト', '日本語']));
 
@@ -475,7 +475,7 @@ void main() {
       await db.initialize();
 
       // Verify database still works after re-initialize
-      final note = await db.createNote(_testNote('after', 'After re-init'));
+      final note = await db.createNote(testNote('after', 'After re-init'));
       expect(note.id, isNotEmpty);
     });
   });
