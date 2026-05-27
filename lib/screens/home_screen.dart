@@ -5,24 +5,16 @@ import '../data/database.dart';
 import '../repository/note_repository.dart';
 import '../data/file_picker.dart';
 import '../models/note.dart';
+import '../usecases/delete_note_use_case.dart';
 import '../usecases/note_list_use_case.dart';
 import '../usecases/quick_note_use_case.dart';
 import '../widgets/quick_capture_dialog.dart';
 
 /// Sort order for the note list.
-enum NoteSortOrder {
-  dateModified,
-  dateCreated,
-  titleAsc,
-  titleDesc,
-}
+enum NoteSortOrder { dateModified, dateCreated, titleAsc, titleDesc }
 
 /// Filter mode for the note list.
-enum NoteFilter {
-  allNotes,
-  byTag,
-  withLinks,
-}
+enum NoteFilter { allNotes, byTag, withLinks }
 
 /// HomeScreen with quick note capture, file import, and tag navigation.
 class HomeScreen extends StatefulWidget {
@@ -40,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late final NoteRepository _repo;
   late final NoteListUseCase _noteListUseCase;
   late final QuickNoteUseCase _quickNoteUseCase;
+  late final DeleteNoteUseCase _deleteNoteUseCase;
   final GraphiteFilePicker _filePicker = GraphiteFilePicker();
   final TextEditingController _searchController = TextEditingController();
 
@@ -92,8 +85,10 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Notes'),
-        content: Text('Delete $count note${count == 1 ? '' : 's'}? '
-            'This cannot be undone.'),
+        content: Text(
+          'Delete $count note${count == 1 ? '' : 's'}? '
+          'This cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -101,8 +96,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete',
-                style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),
@@ -110,9 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (confirmed == true && mounted) {
       try {
-        for (final id in _selectedNoteIds) {
-          await _repo.deleteNote(id);
-        }
+        await _deleteNoteUseCase.bulk(_selectedNoteIds);
         _exitSelectionMode();
         _loadNotes();
       } catch (e) {
@@ -127,6 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _repo = widget.repo ?? NoteRepository(GraphiteDB());
     _noteListUseCase = NoteListUseCase(_repo);
     _quickNoteUseCase = QuickNoteUseCase(_repo);
+    _deleteNoteUseCase = DeleteNoteUseCase(_repo);
     _loadNotes();
   }
 
@@ -256,7 +252,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadNotesWithLinks() async {
     try {
-      await _repo.initialize();
       final notes = await _noteListUseCase.filterWithLinks();
       if (!mounted) return;
       setState(() {
@@ -276,8 +271,12 @@ class _HomeScreenState extends State<HomeScreen> {
         title: _selectionMode
             ? Text('${_selectedNoteIds.length} selected')
             : const Text('Graphite'),
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).colorScheme.surface,
-        foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onSurface,
+        backgroundColor:
+            Theme.of(context).appBarTheme.backgroundColor ??
+            Theme.of(context).colorScheme.surface,
+        foregroundColor:
+            Theme.of(context).appBarTheme.foregroundColor ??
+            Theme.of(context).colorScheme.onSurface,
         leading: _selectionMode
             ? IconButton(
                 icon: const Icon(Icons.close),
@@ -295,76 +294,79 @@ class _HomeScreenState extends State<HomeScreen> {
             : [
                 PopupMenuButton<NoteSortOrder>(
                   icon: const Icon(Icons.sort),
-            tooltip: 'Sort notes',
-            onSelected: _setSortOrder,
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: NoteSortOrder.dateModified,
-                child: Text('Date Modified'),
-              ),
-              const PopupMenuItem(
-                value: NoteSortOrder.dateCreated,
-                child: Text('Date Created'),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: NoteSortOrder.titleAsc,
-                child: Text('Title A-Z'),
-              ),
-              const PopupMenuItem(
-                value: NoteSortOrder.titleDesc,
-                child: Text('Title Z-A'),
-              ),
-            ],
-          ),
-          PopupMenuButton<NoteFilter>(
-            icon: const Icon(Icons.filter_list),
-            tooltip: 'Filter notes',
-            onSelected: _setFilter,
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: NoteFilter.allNotes,
-                child: Text('All Notes'),
-              ),
-              const PopupMenuItem(
-                value: NoteFilter.byTag,
-                child: Text('By Tag'),
-              ),
-              const PopupMenuItem(
-                value: NoteFilter.withLinks,
-                child: Text('With Links'),
-              ),
-            ],
-          ),
-          PopupMenuButton<String>(
-            onSelected: _handleQuickNoteAction,
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'new_note', child: Text('New Note')),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'tags',
-                child: Row(
-                  children: [
-                    Icon(Icons.tag, size: 16),
-                    SizedBox(width: 8),
-                    Text('Browse Tags'),
+                  tooltip: 'Sort notes',
+                  onSelected: _setSortOrder,
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: NoteSortOrder.dateModified,
+                      child: Text('Date Modified'),
+                    ),
+                    const PopupMenuItem(
+                      value: NoteSortOrder.dateCreated,
+                      child: Text('Date Created'),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: NoteSortOrder.titleAsc,
+                      child: Text('Title A-Z'),
+                    ),
+                    const PopupMenuItem(
+                      value: NoteSortOrder.titleDesc,
+                      child: Text('Title Z-A'),
+                    ),
                   ],
                 ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'open_file',
-                child: Row(
-                  children: [
-                    Icon(Icons.folder_open, size: 16),
-                    SizedBox(width: 8),
-                    Text('Import File'),
+                PopupMenuButton<NoteFilter>(
+                  icon: const Icon(Icons.filter_list),
+                  tooltip: 'Filter notes',
+                  onSelected: _setFilter,
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: NoteFilter.allNotes,
+                      child: Text('All Notes'),
+                    ),
+                    const PopupMenuItem(
+                      value: NoteFilter.byTag,
+                      child: Text('By Tag'),
+                    ),
+                    const PopupMenuItem(
+                      value: NoteFilter.withLinks,
+                      child: Text('With Links'),
+                    ),
                   ],
                 ),
-              ),
-            ],
-          ),
-        ],
+                PopupMenuButton<String>(
+                  onSelected: _handleQuickNoteAction,
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'new_note',
+                      child: Text('New Note'),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: 'tags',
+                      child: Row(
+                        children: [
+                          Icon(Icons.tag, size: 16),
+                          SizedBox(width: 8),
+                          Text('Browse Tags'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: 'open_file',
+                      child: Row(
+                        children: [
+                          Icon(Icons.folder_open, size: 16),
+                          SizedBox(width: 8),
+                          Text('Import File'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
       ),
       body: Column(
         children: [
@@ -374,8 +376,15 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(_searchQuery.isEmpty ? 'Home' : 'Search Results',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), fontSize: 14)),
+                Text(
+                  _searchQuery.isEmpty ? 'Home' : 'Search Results',
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
+                    fontSize: 14,
+                  ),
+                ),
               ],
             ),
           ),
@@ -397,7 +406,13 @@ class _HomeScreenState extends State<HomeScreen> {
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Row(
         children: [
-          Icon(Icons.search, size: 20, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.87)),
+          Icon(
+            Icons.search,
+            size: 20,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.87),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
@@ -437,13 +452,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 4,
                 height: 20,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(width: 8),
-              const Text('My Notes',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const Text(
+                'My Notes',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
             ],
           ),
         ),
@@ -462,11 +481,23 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.note_add_outlined, size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38)),
+            Icon(
+              Icons.note_add_outlined,
+              size: 48,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.38),
+            ),
             const SizedBox(height: 8),
             Text(
-              _searchQuery.isEmpty ? 'No notes yet. Tap + to create your first note.' : 'No notes matching "$_searchQuery"',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+              _searchQuery.isEmpty
+                  ? 'No notes yet. Tap + to create your first note.'
+                  : 'No notes matching "$_searchQuery"',
+              style: TextStyle(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
           ],
         ),
@@ -502,8 +533,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Delete Note'),
-                    content: Text('Delete "${note.path}"? '
-                        'This cannot be undone.'),
+                    content: Text(
+                      'Delete "${note.path}"? '
+                      'This cannot be undone.',
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
@@ -511,15 +544,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(context, true),
-                        child: Text('Delete',
-                            style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 );
                 if (confirmed == true) {
                   try {
-                    await _repo.deleteNote(note.id);
+                    await _deleteNoteUseCase.single(note.id);
                     _loadNotes();
                   } catch (e) {
                     debugPrint('Failed to delete note: $e');
@@ -532,13 +569,19 @@ class _HomeScreenState extends State<HomeScreen> {
               alignment: Alignment.centerLeft,
               padding: const EdgeInsets.only(left: 20),
               color: Theme.of(context).colorScheme.tertiary,
-              child: Icon(Icons.push_pin, color: Theme.of(context).colorScheme.onPrimary),
+              child: Icon(
+                Icons.push_pin,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
             ),
             secondaryBackground: Container(
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 20),
               color: Theme.of(context).colorScheme.error,
-              child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onPrimary),
+              child: Icon(
+                Icons.delete,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
             ),
             child: _buildNoteCard(note, isPinned: isPinned),
           );
@@ -580,12 +623,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
           : null,
       child: InkWell(
-        onTap: () => _selectionMode
-            ? _toggleSelection(note)
-            : _openNote(note),
-        onLongPress: () => _selectionMode
-            ? null
-            : _enterSelectionMode(note),
+        onTap: () => _selectionMode ? _toggleSelection(note) : _openNote(note),
+        onLongPress: () => _selectionMode ? null : _enterSelectionMode(note),
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -598,41 +637,63 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Icon(Icons.description_outlined,
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7)),
+                    child: Icon(
+                      Icons.description_outlined,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.7),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(children: [
-                          Expanded(
-                            child: Text(title,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title,
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 15),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
                                 maxLines: 1,
-                                overflow: TextOverflow.ellipsis),
-                          ),
-                          if (isPinned)
-                            Padding(
-                              padding: EdgeInsets.only(left: 4),
-                              child: Icon(Icons.push_pin,
-                                  size: 14, color: Theme.of(context).colorScheme.secondary),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                        ]),
+                            if (isPinned)
+                              Padding(
+                                padding: EdgeInsets.only(left: 4),
+                                child: Icon(
+                                  Icons.push_pin,
+                                  size: 14,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.secondary,
+                                ),
+                              ),
+                          ],
+                        ),
                         if (subtitle.isNotEmpty) ...[
                           const SizedBox(height: 4),
-                          Text(subtitle,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                  height: 1.3),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
+                              height: 1.3,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ],
                     ),
@@ -642,10 +703,23 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(Icons.access_time, size: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38)),
+                  Icon(
+                    Icons.access_time,
+                    size: 12,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.38),
+                  ),
                   const SizedBox(width: 4),
-                  Text(_formatDate(note.updatedAt),
-                      style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+                  Text(
+                    _formatDate(note.updatedAt),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
                 ],
               ),
               if (note.tags.isNotEmpty || (_linkCounts[note.id] ?? 0) > 0) ...[
@@ -658,9 +732,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     if ((_linkCounts[note.id] ?? 0) > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -673,14 +751,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ...note.tags
-                        .map((tag) => Chip(
-                              label: Text(tag,
-                                  style: const TextStyle(fontSize: 10)),
-                              padding: EdgeInsets.zero,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: VisualDensity.compact,
-                            ))
+                        .map(
+                          (tag) => Chip(
+                            label: Text(
+                              tag,
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                            padding: EdgeInsets.zero,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        )
                         .toList(),
                   ],
                 ),
@@ -732,9 +814,9 @@ class _HomeScreenState extends State<HomeScreen> {
         } catch (e) {
           debugPrint('Failed to create quick note: $e');
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to save note')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Failed to save note')));
         }
       }
     } else if (action == 'tags') {
@@ -752,7 +834,10 @@ class _HomeScreenState extends State<HomeScreen> {
         final fileContent = await file.readAsString();
         debugPrint('Imported file: ${file.path}');
 
-        final created = await _quickNoteUseCase.importFile(file.path, fileContent);
+        final created = await _quickNoteUseCase.importFile(
+          file.path,
+          fileContent,
+        );
 
         if (!mounted) return;
         Navigator.pushNamed(context, '/editor/${created.id}');
@@ -768,9 +853,9 @@ class _HomeScreenState extends State<HomeScreen> {
       } catch (e) {
         debugPrint('Failed to read/import file: $e');
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to import file')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Failed to import file')));
       }
     }
   }
@@ -798,8 +883,18 @@ class _HomeScreenState extends State<HomeScreen> {
     if (diff == 1) return 'Yesterday';
 
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final monthStr = months[date.month - 1];
 
@@ -815,15 +910,20 @@ class _HomeScreenState extends State<HomeScreen> {
       color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
       child: Row(
         children: [
-          Icon(Icons.filter_alt, size: 16, color: Theme.of(context).colorScheme.primary),
+          Icon(
+            Icons.filter_alt,
+            size: 16,
+            color: Theme.of(context).colorScheme.primary,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Filtered by $_activeTagFilter ($_filteredCount note${_filteredCount == 1 ? '' : 's'})',
               style: TextStyle(
-                  fontSize: 13,
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w500),
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           IconButton(
@@ -875,27 +975,27 @@ class _HomeScreenState extends State<HomeScreen> {
           curve: Curves.easeIn,
         ),
         child: QuickCaptureDialog(
-            onSave: (title, content, tags) async {
-              _isQuickCaptureOpen = false;
-              Navigator.pop(context); // close bottom sheet
+          onSave: (title, content, tags) async {
+            _isQuickCaptureOpen = false;
+            Navigator.pop(context); // close bottom sheet
 
-              try {
-                await _quickNoteUseCase.fromText(title, content, tags: tags);
-                if (!mounted) return;
-                _loadNotes(); // refresh list with new note at top
-              } catch (e) {
-                debugPrint('Quick capture save failed: $e');
-                if (!mounted) return;
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  const SnackBar(content: Text('Failed to save note')),
-                );
-              }
-            },
-            onCancel: () {
-              _isQuickCaptureOpen = false;
-            },
-          ),
+            try {
+              await _quickNoteUseCase.fromText(title, content, tags: tags);
+              if (!mounted) return;
+              _loadNotes(); // refresh list with new note at top
+            } catch (e) {
+              debugPrint('Quick capture save failed: $e');
+              if (!mounted) return;
+              ScaffoldMessenger.of(this.context).showSnackBar(
+                const SnackBar(content: Text('Failed to save note')),
+              );
+            }
+          },
+          onCancel: () {
+            _isQuickCaptureOpen = false;
+          },
         ),
+      ),
     ).whenComplete(() {
       _isQuickCaptureOpen = false;
     });

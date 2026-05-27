@@ -23,11 +23,13 @@ class NoteListUseCase {
 
   /// Return notes that are tagged with [tag].
   Future<List<Note>> filterByTag(String tag) async {
+    await _repo.initialize();
     return _repo.getNotesByTag(tag);
   }
 
   /// Return notes that have at least one outgoing wiki-link.
   Future<List<Note>> filterWithLinks() async {
+    await _repo.initialize();
     return _repo.getNotesWithLinks();
   }
 
