@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../data/database.dart';
 import '../repository/note_repository.dart';
 import '../models/note.dart';
+import '../usecases/save_note_use_case.dart';
+import '../usecases/navigate_link_use_case.dart';
 import '../widgets/editor_pane.dart';
 import '../widgets/preview_pane.dart';
 
@@ -33,6 +35,8 @@ class _EditorScreenState extends State<EditorScreen>
     with WidgetsBindingObserver {
   final TextEditingController _controller = TextEditingController();
   late final NoteRepository _repo;
+  late final SaveNoteUseCase _saveNoteUseCase;
+  late final NavigateLinkUseCase _navigateLinkUseCase;
 
   String? _savedContent;
   Timer? _autoSaveTimer;
@@ -48,6 +52,8 @@ class _EditorScreenState extends State<EditorScreen>
   void initState() {
     super.initState();
     _repo = widget.repo ?? NoteRepository(GraphiteDB());
+    _saveNoteUseCase = SaveNoteUseCase(_repo);
+    _navigateLinkUseCase = NavigateLinkUseCase(_repo);
     WidgetsBinding.instance.addObserver(this);
     _loadNote();
   }
@@ -101,24 +107,7 @@ class _EditorScreenState extends State<EditorScreen>
     setState(() => _isSaving = true);
     try {
       final content = _controller.text;
-      final existing = await _repo.readNote(widget.noteId);
-      if (existing != null) {
-        await _repo.updateNote(existing.copyWith(
-          content: content,
-          updatedAt: DateTime.now(),
-        ));
-      } else {
-        await _repo.createNote(Note(
-          id: widget.noteId,
-          path: widget.noteId,
-          filePath: widget.noteId,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          content: content,
-          tags: const [],
-        ));
-      }
-      await _repo.extractLinks(widget.noteId, content);
+      await _saveNoteUseCase.call(widget.noteId, content);
       _savedContent = content;
 
       // Show "Saved" indicator briefly
@@ -143,45 +132,34 @@ class _EditorScreenState extends State<EditorScreen>
   }
 
   Future<void> _onLinkTap(String title) async {
-    final note = await _repo.findNoteByTitle(title);
-
-    if (!mounted) return;
-
+    // First find existing
+    final note = await _navigateLinkUseCase.find(title);
     if (note != null) {
-      Navigator.pushNamed(context, '/editor/${note.id}');
-    } else {
-      final create = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text('Create "$title"?'),
-          content: const Text('This note does not exist yet. Create it now?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Create'),
-            ),
-          ],
-        ),
-      );
-
-      if (create == true && mounted) {
-        final newNote = await _repo.createNote(Note(
-          id: '',
-          path: title,
-          filePath: title,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          content: '# $title\n\n',
-          tags: const [],
-        ));
-        if (mounted) {
-          Navigator.pushNamed(context, '/editor/${newNote.id}');
-        }
-      }
+      if (mounted) Navigator.pushNamed(context, '/editor/${note.id}');
+      return;
+    }
+    // Not found — show "Create?" dialog
+    if (!mounted) return;
+    final create = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Create "$title"?'),
+        content: const Text('This note does not exist yet. Create it now?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+    if (create == true && mounted) {
+      final newNote = await _navigateLinkUseCase.create(title);
+      if (mounted) Navigator.pushNamed(context, '/editor/${newNote.id}');
     }
   }
 

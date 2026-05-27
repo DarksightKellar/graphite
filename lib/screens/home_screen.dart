@@ -5,6 +5,8 @@ import '../data/database.dart';
 import '../repository/note_repository.dart';
 import '../data/file_picker.dart';
 import '../models/note.dart';
+import '../usecases/note_list_use_case.dart';
+import '../usecases/quick_note_use_case.dart';
 import '../widgets/quick_capture_dialog.dart';
 
 /// Sort order for the note list.
@@ -36,6 +38,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   late final NoteRepository _repo;
+  late final NoteListUseCase _noteListUseCase;
+  late final QuickNoteUseCase _quickNoteUseCase;
   final GraphiteFilePicker _filePicker = GraphiteFilePicker();
   final TextEditingController _searchController = TextEditingController();
 
@@ -121,6 +125,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _repo = widget.repo ?? NoteRepository(GraphiteDB());
+    _noteListUseCase = NoteListUseCase(_repo);
+    _quickNoteUseCase = QuickNoteUseCase(_repo);
     _loadNotes();
   }
 
@@ -133,8 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadNotes() async {
     try {
-      await _repo.initialize();
-      final notes = await _repo.listAllNotes();
+      final notes = await _noteListUseCase.loadAll();
       if (!mounted) return;
       setState(() {
         _displayedNotes = notes;
@@ -145,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
       try {
         final counts = <String, int>{};
         for (final note in notes) {
-          final count = await _repo.getLinkCount(note.id);
+          final count = await _noteListUseCase.linkCount(note.id);
           counts[note.id] = count;
         }
         if (!mounted) return;
@@ -179,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _isSearching = true);
 
       try {
-        final results = await _repo.searchNotes(query);
+        final results = await _noteListUseCase.search(query);
         if (!mounted) return;
         setState(() {
           _displayedNotes = results;
@@ -252,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadNotesWithLinks() async {
     try {
       await _repo.initialize();
-      final notes = await _repo.getNotesWithLinks();
+      final notes = await _noteListUseCase.filterWithLinks();
       if (!mounted) return;
       setState(() {
         _activeTagFilter = null;
@@ -708,19 +713,11 @@ class _HomeScreenState extends State<HomeScreen> {
       );
 
       if (title != null && title.trim().isNotEmpty) {
-        final now = DateTime.now();
-        final note = Note(
-          id: '', // assigned by database
-          path: 'Quick Note ${now.millisecondsSinceEpoch}',
-          filePath: '',
-          createdAt: now,
-          updatedAt: now,
-          content: '# $title\n\nQuick note captured at $now.',
-          tags: const [],
-        );
-
         try {
-          final created = await _repo.createNote(note);
+          final created = await _quickNoteUseCase.fromText(
+            title,
+            'Quick note captured at ${DateTime.now()}.',
+          );
           if (!mounted) return;
           Navigator.pushNamed(context, '/editor/${created.id}');
 
@@ -755,23 +752,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final fileContent = await file.readAsString();
         debugPrint('Imported file: ${file.path}');
 
-        final now = DateTime.now();
-        String displayName = file.path.split('/').last;
-        if (displayName.endsWith('.md')) {
-          displayName = displayName.substring(0, displayName.length - 3);
-        }
-
-        final note = Note(
-          id: '', // assigned by database
-          path: 'Imported ${displayName}',
-          filePath: file.path,
-          createdAt: now,
-          updatedAt: now,
-          content: '# $displayName\n\n> Imported from: ${file.path}\n> Imported at: $now\n\n$fileContent',
-          tags: const [],
-        );
-
-        final created = await _repo.createNote(note);
+        final created = await _quickNoteUseCase.importFile(file.path, fileContent);
 
         if (!mounted) return;
         Navigator.pushNamed(context, '/editor/${created.id}');
@@ -867,7 +848,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Filter the note list to only show notes with [tag].
   Future<void> filterByTag(String tag) async {
     try {
-      final notes = await _repo.getNotesByTag(tag);
+      final notes = await _noteListUseCase.filterByTag(tag);
       if (!mounted) return;
       setState(() {
         _activeTagFilter = tag;
@@ -898,27 +879,8 @@ class _HomeScreenState extends State<HomeScreen> {
               _isQuickCaptureOpen = false;
               Navigator.pop(context); // close bottom sheet
 
-              final now = DateTime.now();
-              final effectiveTitle = title.trim().isEmpty
-                  ? 'Untitled ${now.millisecondsSinceEpoch}'
-                  : title.trim();
-
-              final noteContent = content.trim().isEmpty
-                  ? '# $effectiveTitle'
-                  : '# $effectiveTitle\n\n$content';
-
-              final note = Note(
-                id: '',
-                path: effectiveTitle,
-                filePath: '',
-                createdAt: now,
-                updatedAt: now,
-                content: noteContent,
-                tags: tags,
-              );
-
               try {
-                await _repo.createNote(note);
+                await _quickNoteUseCase.fromText(title, content, tags: tags);
                 if (!mounted) return;
                 _loadNotes(); // refresh list with new note at top
               } catch (e) {
