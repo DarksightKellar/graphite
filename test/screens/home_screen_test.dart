@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:graphite/models/note.dart';
 import 'package:graphite/screens/home_screen.dart';
 import 'package:graphite/usecases/delete_note_use_case.dart';
@@ -26,23 +27,29 @@ void main() {
   });
 
   Widget buildApp() {
-    return MaterialApp(
-      home: HomeScreen(
-        noteListUseCase: noteListUseCase,
-        quickNoteUseCase: quickNoteUseCase,
-        deleteNoteUseCase: deleteNoteUseCase,
-      ),
-      onGenerateRoute: (settings) {
-        if (settings.name == '/tags') {
-          return MaterialPageRoute(
-              builder: (_) => const Scaffold(body: Text('Tags')));
-        }
-        if (settings.name != null && settings.name!.startsWith('/editor/')) {
-          return MaterialPageRoute(
-              builder: (_) => const Scaffold(body: Text('Editor')));
-        }
-        return null;
-      },
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, __) => HomeScreen(
+            noteListUseCase: noteListUseCase,
+            quickNoteUseCase: quickNoteUseCase,
+            deleteNoteUseCase: deleteNoteUseCase,
+          ),
+        ),
+        GoRoute(
+          path: '/tags',
+          builder: (_, __) => const Scaffold(body: Text('Tags')),
+        ),
+        GoRoute(
+          path: '/editor/:id',
+          builder: (_, state) =>
+              const Scaffold(body: Text('Editor')),
+        ),
+      ],
+    );
+    return MaterialApp.router(
+      routerConfig: router,
     );
   }
 

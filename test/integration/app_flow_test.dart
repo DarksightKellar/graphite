@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:graphite/models/note.dart';
 import 'package:graphite/screens/editor_screen.dart';
@@ -22,6 +23,7 @@ void main() {
   late DeleteNoteUseCase deleteNoteUseCase;
   late SaveNoteUseCase saveNoteUseCase;
   late NavigateLinkUseCase navigateLinkUseCase;
+  GoRouter? _router;
 
   setUp(() {
     fakeRepo = FakeNoteRepository();
@@ -32,32 +34,37 @@ void main() {
     navigateLinkUseCase = NavigateLinkUseCase(fakeRepo);
   });
 
-  Widget buildApp() => MaterialApp(
-    title: 'Graphite',
-    home: HomeScreen(
-      noteListUseCase: noteListUseCase,
-      quickNoteUseCase: quickNoteUseCase,
-      deleteNoteUseCase: deleteNoteUseCase,
-    ),
-    onGenerateRoute: (settings) {
-      if (settings.name == '/tags') {
-        return MaterialPageRoute(
-          builder: (_) => TagBrowserScreen(noteListUseCase: noteListUseCase),
-        );
-      }
-      if (settings.name != null && settings.name!.startsWith('/editor/')) {
-        final id = settings.name!.split('/').last;
-        return MaterialPageRoute(
-          builder: (_) => EditorScreen(
-            noteId: id,
+  Widget buildApp() {
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, __) => HomeScreen(
+            noteListUseCase: noteListUseCase,
+            quickNoteUseCase: quickNoteUseCase,
+            deleteNoteUseCase: deleteNoteUseCase,
+          ),
+        ),
+        GoRoute(
+          path: '/tags',
+          builder: (_, __) =>
+              TagBrowserScreen(noteListUseCase: noteListUseCase),
+        ),
+        GoRoute(
+          path: '/editor/:id',
+          builder: (_, state) => EditorScreen(
+            noteId: state.pathParameters['id']!,
             saveNoteUseCase: saveNoteUseCase,
             navigateLinkUseCase: navigateLinkUseCase,
           ),
-        );
-      }
-      return null;
-    },
-  );
+        ),
+      ],
+    );
+    _router = router;
+    return MaterialApp.router(
+      routerConfig: router,
+    );
+  }
 
   Future<void> settle(WidgetTester t) async {
     for (var i = 0; i < 8; i++) {
@@ -123,13 +130,10 @@ void main() {
     // Note in list
     expect(find.text('First Note'), findsOneWidget);
 
-    // Navigate to editor by pushing route directly (bypasses
-    // InkWell/Dismissible gesture complexity)
+    // Navigate to editor via GoRouter
     final notes = await fakeRepo.listAllNotes();
     final id = notes.first.id;
-    tester
-        .state<NavigatorState>(find.byType(Navigator))
-        .pushNamed('/editor/$id');
+    _router!.go('/editor/$id');
     await settle(tester);
 
     // Editor screen
@@ -152,10 +156,8 @@ void main() {
     await settle(tester);
     expect(find.text('Edit Test'), findsOneWidget);
 
-    // Navigate to editor
-    tester
-        .state<NavigatorState>(find.byType(Navigator))
-        .pushNamed('/editor/${note.id}');
+    // Navigate to editor by tapping the note in the list
+    await tester.tap(find.text('Edit Test'));
     await settle(tester);
     expect(find.text('Edit Note'), findsOneWidget);
     expect(find.text('Original content.'), findsOneWidget);
