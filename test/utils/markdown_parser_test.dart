@@ -502,6 +502,15 @@ void main() {
       });
       expect(hasBold, isTrue);
     });
+
+    test('preserves paragraph breaks from blank lines', () {
+      final spans = buildPreviewSpans('hello\n\nworld');
+      final texts = spans
+          .whereType<TextSpan>()
+          .map((s) => s.text ?? '')
+          .join();
+      expect(texts, contains('\n\n'));
+    });
   });
 
   group('PreviewPane widget', () {

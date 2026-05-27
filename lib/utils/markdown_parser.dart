@@ -326,7 +326,10 @@ List<InlineSpan> buildPreviewSpans(
       continue;
     }
 
-    if (line.trim().isEmpty) continue;
+    if (line.trim().isEmpty) {
+      spans.add(const TextSpan(text: '\n'));
+      continue;
+    }
 
     // H1, H2, H3 headings
     var headingMatch = RegExp(r'^(#{1,3})\s+(.+)$').firstMatch(line);
