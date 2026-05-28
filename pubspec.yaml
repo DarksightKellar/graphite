@@ -27,6 +27,11 @@ dev_dependencies:
   # Fix sqflite backend mismatch for desktop testing (CI/CD compatibility)
   sqflite_common_ffi: ^2.3.1
   sqlite3_flutter_libs: ^0.6.0+eol
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  image_path: "design/app-icon.png"
 
 flutter:
   uses-material-design: true
