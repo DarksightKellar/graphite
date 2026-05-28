@@ -68,7 +68,7 @@ class GraphiteDB {
       filePath: 'Welcome.md',
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
-      content: '# Welcome to Graphite\n\n'
+      content: '# Welcome to Graphite #welcome\n\n'
           'Your personal, local-first notes app. '
           'Everything stays on this device — no accounts, no cloud, no setup.\n\n'
           '## Getting Started\n'

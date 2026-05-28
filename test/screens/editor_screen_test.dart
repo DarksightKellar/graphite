@@ -55,11 +55,15 @@ void main() {
 
   // ── Rendering ──────────────────────────────────────────────────────
 
-  /// Helper: find a RichText widget whose text contains [substring].
+  /// Helper: find a RichText or SelectableText widget whose text contains [substring].
   Finder findRichTextContaining(String substring) {
     return find.byWidgetPredicate((w) {
       if (w is RichText) {
         return w.text.toPlainText().contains(substring);
+      }
+      if (w is SelectableText) {
+        final text = w.data ?? w.textSpan?.toPlainText() ?? '';
+        return text.contains(substring);
       }
       return false;
     });

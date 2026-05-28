@@ -160,7 +160,7 @@ void main() {
     await tester.tap(find.text('Edit Test'));
     await settle(tester);
     expect(find.text('Edit Note'), findsOneWidget);
-    expect(find.text('Original content.'), findsOneWidget);
+    expect(find.text('Original content.'), findsAtLeastNWidgets(1));
 
     // Edit content using descendant finder (the TextField is inside EditorPane)
     final editorPane = find.byType(EditorPane);

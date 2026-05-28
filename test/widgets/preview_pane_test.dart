@@ -1,52 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphite/utils/markdown_parser.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:graphite/widgets/preview_pane.dart';
 
+Widget wrap(Widget child) => MaterialApp(
+      home: Scaffold(body: child),
+    );
+
 void main() {
-  group('buildPreviewSpans', () {
-    test('produces WidgetSpan for [[wiki-link]]', () {
-      final spans = buildPreviewSpans('See [[My Note]] here.');
-      final hasWidgetSpan = spans.any((s) => s is WidgetSpan);
-      expect(hasWidgetSpan, isTrue);
-    });
-
-    test('produces TextSpan for text without links', () {
-      final spans = buildPreviewSpans('Just plain text.');
-      final allTextSpans = spans.every((s) => s is TextSpan);
-      expect(allTextSpans, isTrue);
-    });
-
-    test('handles multiple wiki-links in one line', () {
-      final spans = buildPreviewSpans('[[A]] and [[B]].');
-      final widgetSpans = spans.whereType<WidgetSpan>();
-      expect(widgetSpans.length, equals(2));
-    });
-
-    test('handles headings without breaking', () {
-      final spans =
-          buildPreviewSpans('# Heading\n\nText with [[Link]].');
-      expect(spans.length, greaterThanOrEqualTo(2));
-    });
-
-    test('handles escaped brackets as plain text', () {
-      final spans = buildPreviewSpans(r'This \[[escaped]] is text.');
-      final widgetSpans = spans.whereType<WidgetSpan>();
-      expect(widgetSpans, isEmpty);
-    });
-
-    test('skips empty brackets', () {
-      final spans = buildPreviewSpans('Empty [[]] here.');
-      final widgetSpans = spans.whereType<WidgetSpan>();
-      expect(widgetSpans, isEmpty);
-    });
-  });
-
-  group('PreviewPane widget', () {
-    Widget wrap(Widget child) => MaterialApp(
-          home: Scaffold(body: child),
-        );
-
+  group('PreviewPane', () {
     testWidgets('renders wiki-link as tappable text', (tester) async {
       String? tappedTitle;
 
@@ -63,10 +25,83 @@ void main() {
       expect(tappedTitle, equals('My Note'));
     });
 
-    testWidgets('shows empty state when content is empty',
-        (tester) async {
+    testWidgets('shows empty state when content is empty', (tester) async {
       await tester.pumpWidget(wrap(const PreviewPane(content: '')));
       expect(find.text('No content to preview'), findsOneWidget);
+    });
+
+    testWidgets('renders heading via Markdown widget', (tester) async {
+      await tester.pumpWidget(wrap(const PreviewPane(
+        content: '# Main Title\n\nSome content.',
+      )));
+
+      expect(find.byType(Markdown), findsOneWidget);
+    });
+
+    testWidgets('renders bold via Markdown widget', (tester) async {
+      await tester.pumpWidget(wrap(const PreviewPane(
+        content: 'This is **bold** text.',
+      )));
+
+      expect(find.byType(Markdown), findsOneWidget);
+    });
+
+    testWidgets('renders italic via Markdown widget', (tester) async {
+      await tester.pumpWidget(wrap(const PreviewPane(
+        content: 'This is *italic* text.',
+      )));
+
+      expect(find.byType(Markdown), findsOneWidget);
+    });
+
+    testWidgets('renders bullet list via Markdown widget', (tester) async {
+      await tester.pumpWidget(wrap(const PreviewPane(
+        content: '- Item A\n- Item B',
+      )));
+
+      expect(find.byType(Markdown), findsOneWidget);
+    });
+
+    testWidgets('preserves paragraph breaks', (tester) async {
+      await tester.pumpWidget(wrap(const PreviewPane(
+        content: 'hello\n\nworld',
+      )));
+
+      expect(find.byType(Markdown), findsOneWidget);
+    });
+
+    testWidgets('renders multiple wiki-links', (tester) async {
+      await tester.pumpWidget(wrap(const PreviewPane(
+        content: 'See [[Note A]] and [[Note B]].',
+      )));
+
+      expect(find.text('Note A'), findsOneWidget);
+      expect(find.text('Note B'), findsOneWidget);
+    });
+
+    testWidgets('handles empty brackets without crashing', (tester) async {
+      await tester.pumpWidget(wrap(const PreviewPane(
+        content: 'Empty [[]] here.',
+      )));
+
+      expect(find.byType(Markdown), findsOneWidget);
+    });
+
+    testWidgets('renders #tags', (tester) async {
+      await tester.pumpWidget(wrap(const PreviewPane(
+        content: 'Check #todo item.',
+      )));
+
+      expect(find.text('#todo'), findsOneWidget);
+    });
+
+    testWidgets('renders multiple #tags', (tester) async {
+      await tester.pumpWidget(wrap(const PreviewPane(
+        content: '#work #personal task.',
+      )));
+
+      expect(find.text('#work'), findsOneWidget);
+      expect(find.text('#personal'), findsOneWidget);
     });
   });
 }

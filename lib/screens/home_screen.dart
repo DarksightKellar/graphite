@@ -871,9 +871,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _openNote(Note note) {
+  void _openNote(Note note) async {
     if (note.id.isNotEmpty) {
-      context.push('/editor/${note.id}');
+      await context.push('/editor/${note.id}');
+      if (mounted) _loadNotes();
     }
   }
 

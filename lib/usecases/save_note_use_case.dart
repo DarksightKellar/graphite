@@ -1,8 +1,11 @@
 import '../models/note.dart';
 import '../repository/note_repository.dart';
 
+/// Extracts #hashtag patterns from content.
+final _tagPattern = RegExp(r'#[a-zA-Z0-9_-]+');
+
 /// Saves a note's content, creating or updating as needed,
-/// and extracts wiki-links afterward.
+/// and extracts wiki-links and #tags afterward.
 class SaveNoteUseCase {
   final NoteRepository _repo;
 
@@ -21,7 +24,9 @@ class SaveNoteUseCase {
   /// Saves [content] for the note identified by [noteId].
   ///
   /// If the note already exists, it is updated in place preserving its
-  /// original [Note.path], [Note.filePath], [Note.createdAt], and [Note.tags].
+  /// original [Note.path], [Note.filePath], and [Note.createdAt].
+  /// #tags are re-extracted from content on every save.
+  ///
   /// If the note does not exist, a new one is created with [noteId] as
   /// both [Note.path] and [Note.filePath].
   ///
@@ -29,12 +34,14 @@ class SaveNoteUseCase {
   ///
   /// Returns the saved [Note].
   Future<Note> call(String noteId, String content) async {
+    final tags = _extractTags(content);
     final existing = await _repo.readNote(noteId);
 
     if (existing != null) {
       final updated = existing.copyWith(
         content: content,
         updatedAt: DateTime.now(),
+        tags: tags,
       );
       await _repo.updateNote(updated);
       await _repo.extractLinks(noteId, content);
@@ -48,11 +55,20 @@ class SaveNoteUseCase {
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
           content: content,
-          tags: const [],
+          tags: tags,
         ),
       );
       await _repo.extractLinks(created.id, content);
       return created;
     }
+  }
+
+  /// Extract unique #hashtags from content, preserving the # prefix.
+  List<String> _extractTags(String content) {
+    return _tagPattern
+        .allMatches(content)
+        .map((m) => m.group(0)!)
+        .toSet()
+        .toList();
   }
 }

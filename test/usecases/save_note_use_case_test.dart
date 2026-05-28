@@ -15,7 +15,7 @@ void main() {
     });
 
     test(
-      'updates existing note in place preserving original metadata',
+      'updates existing note re-extracting tags from content',
       () async {
         // Arrange: pre-populate with an existing note
         final originalNote = Note(
@@ -38,7 +38,7 @@ void main() {
         expect(saved.filePath, '/vault/projects/my-note.md');
         expect(saved.createdAt, DateTime(2025, 1, 1));
         expect(saved.content, '# New Content');
-        expect(saved.tags, ['important', 'draft']);
+        expect(saved.tags, isEmpty); // re-extracted from content — no #tags
         expect(saved.updatedAt.isAfter(DateTime(2025, 1, 1)), isTrue);
 
         // Assert: the note in the repository was updated
@@ -48,20 +48,20 @@ void main() {
       },
     );
 
-    test('creates new note when note does not exist', () async {
-      // Act: save a note that doesn't exist
-      final saved = await useCase('fresh-note', '# Fresh Content');
+    test('creates new note with tags from content', () async {
+      // Act: save a note with #tags
+      final saved = await useCase('fresh-note', '# Fresh Content #draft');
 
-      // Assert: a new note was created
+      // Assert: a new note was created with tags extracted
       expect(saved.path, 'fresh-note');
       expect(saved.filePath, 'fresh-note');
-      expect(saved.content, '# Fresh Content');
-      expect(saved.tags, isEmpty);
+      expect(saved.content, '# Fresh Content #draft');
+      expect(saved.tags, ['#draft']);
 
       // Assert: the note is now in the repository
       final reloaded = await repo.readNote(saved.id);
       expect(reloaded, isNotNull);
-      expect(reloaded!.content, '# Fresh Content');
+      expect(reloaded!.content, '# Fresh Content #draft');
     });
 
     test('extracts links after save', () async {
@@ -86,6 +86,30 @@ void main() {
       // Assert: links were extracted
       final linkCount = await repo.getLinkCount('note-links');
       expect(linkCount, 2);
+    });
+
+    test('extracts tags from content on save', () async {
+      // Arrange
+      final originalNote = Note(
+        id: 'note-tags',
+        path: 'note-tags',
+        filePath: 'note-tags',
+        createdAt: DateTime(2025, 1, 1),
+        updatedAt: DateTime(2025, 1, 1),
+        content: 'old',
+        tags: const ['stale-tag'],
+      );
+      repo.notes.add(originalNote);
+
+      // Act: save content with #tags
+      final saved = await useCase(
+        'note-tags',
+        '# Title\n\nCheck #work #personal task.',
+      );
+
+      // Assert: tags re-extracted, stale tags replaced
+      expect(saved.tags, containsAll(['#work', '#personal']));
+      expect(saved.tags.length, 2);
     });
 
     test('initialize delegates to repository', () async {
