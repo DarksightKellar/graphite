@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -15,22 +16,65 @@ import 'package:graphite/usecases/save_note_use_case.dart';
 import 'package:graphite/widgets/editor_pane.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'helpers/fake_note_repository.dart';
+import 'helpers/fake_graphite_db.dart';
+
 /// Micro-benchmarks for MVP performance targets.
 ///
 /// Targets:
 ///   - Cold start: <2 seconds (DB init measured here)
 ///   - Search latency: <500ms p95 (measured with 100/200/500 notes)
 ///   - Time to first note: <30 seconds (editor load measured here)
+///
+/// Note: widget rendering benchmarks use [FakeGraphiteDB] to isolate Flutter
+/// rendering perf from sqflite FFI I/O. DB I/O is benchmarked separately above.
+
+/// Helper: seed notes into a [FakeGraphiteDB] (synchronous, for widget benchmarks).
+void _seedFakeNotes(FakeGraphiteDB db, int count, {int contentLength = 200}) {
+  final rng = Random(42);
+  for (var i = 0; i < count; i++) {
+    final title = 'Benchmark Note ${i.toString().padLeft(4, '0')}';
+    final content = String.fromCharCodes(List.generate(contentLength, (_) => rng.nextInt(26) + 97));
+    db.notes.add(
+      Note(
+        id: title.hashCode.toString(),
+        path: title,
+        filePath: '$title.md',
+        createdAt: DateTime.now().subtract(Duration(days: count - i)),
+        updatedAt: DateTime.now().subtract(Duration(minutes: i)),
+        content: '# $title\n\n$content',
+        tags: i % 3 == 0 ? ['benchmark'] : [],
+      ),
+    );
+  }
+}
+
 void main() {
   group('Performance benchmarks', () {
     late GraphiteDB db;
 
-    setUpAll(() {
+    setUpAll(() async {
       sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
+      databaseFactory = databaseFactoryFfiNoIsolate;
+      // Nuke leftover DB from previous runs.
+      final dbFile = File('.dart_tool/sqflite_common_ffi/databases/graphite.db');
+      if (await dbFile.exists()) {
+        await dbFile.delete();
+      }
+    });
+
+    tearDownAll(() async {
+      // Nuke the DB file so subsequent runs start fresh.
+      // sqflite_common_ffi creates the db at <cwd>/.dart_tool/sqflite_common_ffi/databases/
+      final dbFile = File('.dart_tool/sqflite_common_ffi/databases/graphite.db');
+      if (await dbFile.exists()) {
+        await dbFile.delete();
+      }
+      GraphiteDB.resetForTesting();
     });
 
     setUp(() async {
+      GraphiteDB.resetForTesting();
       db = GraphiteDB();
       await db.initialize();
     });
@@ -129,21 +173,30 @@ void main() {
           final bigContent = String.fromCharCodes(List.generate(size, (_) => rng.nextInt(26) + 97));
           final existing = await db.readNote(noteId);
           if (existing != null) {
-            await db.updateNote(existing.copyWith(content: '# Large Note\\n\\n$bigContent', updatedAt: DateTime.now()));
+            await db.updateNote(existing.copyWith(
+              content: '# Large Note\\n\\n$bigContent',
+              updatedAt: DateTime.now(),
+            ));
           }
 
           final sw = Stopwatch()..start();
-          await tester.pumpWidget(
-            MaterialApp(
-              home: EditorScreen(
-                noteId: noteId,
-                saveNoteUseCase: SaveNoteUseCase(NoteRepository(db)),
-                navigateLinkUseCase: NavigateLinkUseCase(NoteRepository(db)),
+          // Run widget build + DB I/O entirely in real async zone so
+          // sqflite FFI futures can resolve without deadlocking.
+          await tester.runAsync(() async {
+            await tester.pumpWidget(
+              MaterialApp(
+                home: EditorScreen(
+                  noteId: noteId,
+                  saveNoteUseCase: SaveNoteUseCase(NoteRepository(db)),
+                  navigateLinkUseCase: NavigateLinkUseCase(NoteRepository(db)),
+                ),
               ),
-            ),
-          );
-          // Wait for load to complete
-          await tester.pumpAndSettle(const Duration(seconds: 30));
+            );
+            // Give sqflite FFI time to complete _loadNote.
+            await Future<void>.delayed(const Duration(seconds: 2));
+            await tester.pump();
+            await tester.pump();
+          });
           sw.stop();
 
           final editorPane = find.byType(EditorPane);
@@ -156,20 +209,27 @@ void main() {
     });
 
     testWidgets('home screen render with 100 notes', (tester) async {
-      await seedNotes(100);
+      // Use FakeNoteRepository — rendering perf is what matters here;
+      // sqflite FFI I/O is already benchmarked above.
+      final fakeDb = FakeGraphiteDB();
+      _seedFakeNotes(fakeDb, 100);
+      final fakeRepo = FakeNoteRepository(fakeDb);
 
       final sw = Stopwatch()..start();
       await tester.pumpWidget(
         MaterialApp(
           home: HomeScreen(
-            noteListUseCase: NoteListUseCase(NoteRepository(db)),
-            quickNoteUseCase: QuickNoteUseCase(NoteRepository(db)),
-            deleteNoteUseCase: DeleteNoteUseCase(NoteRepository(db)),
+            noteListUseCase: NoteListUseCase(fakeRepo),
+            quickNoteUseCase: QuickNoteUseCase(fakeRepo),
+            deleteNoteUseCase: DeleteNoteUseCase(fakeRepo),
           ),
         ),
       );
-      // Wait for async data load
-      await tester.pumpAndSettle(const Duration(seconds: 30));
+      // Pump frames until note cards render (fake DB is synchronous).
+      for (var i = 0; i < 50; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.byType(Card).evaluate().isNotEmpty) break;
+      }
       sw.stop();
 
       // Should render note cards
@@ -181,37 +241,25 @@ void main() {
 
   group('Jank detection', () {
     testWidgets('scrolling 500 note list should not drop frames', (tester) async {
-      final db = GraphiteDB();
-      await db.initialize();
-
-      // Seed 500 notes
-      final rng = Random(99);
-      for (var i = 0; i < 500; i++) {
-        final title = 'Scroll Note ${i.toString().padLeft(4, '0')}';
-        final content = String.fromCharCodes(List.generate(200, (_) => rng.nextInt(26) + 97));
-        await db.createNote(
-          Note(
-            id: '',
-            path: title,
-            filePath: '$title.md',
-            createdAt: DateTime.now().subtract(Duration(days: 500 - i)),
-            updatedAt: DateTime.now().subtract(Duration(minutes: i)),
-            content: '# $title\\n\\n$content',
-            tags: i % 5 == 0 ? ['scroll-test'] : [],
-          ),
-        );
-      }
+      // Use FakeNoteRepository — scrolling perf is about widget rendering,
+      // not DB I/O (which is benchmarked separately above).
+      final fakeDb = FakeGraphiteDB();
+      _seedFakeNotes(fakeDb, 500);
+      final fakeRepo = FakeNoteRepository(fakeDb);
 
       await tester.pumpWidget(
         MaterialApp(
           home: HomeScreen(
-            noteListUseCase: NoteListUseCase(NoteRepository(db)),
-            quickNoteUseCase: QuickNoteUseCase(NoteRepository(db)),
-            deleteNoteUseCase: DeleteNoteUseCase(NoteRepository(db)),
+            noteListUseCase: NoteListUseCase(fakeRepo),
+            quickNoteUseCase: QuickNoteUseCase(fakeRepo),
+            deleteNoteUseCase: DeleteNoteUseCase(fakeRepo),
           ),
         ),
       );
-      await tester.pumpAndSettle(const Duration(seconds: 30));
+      for (var i = 0; i < 100; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.byType(Card).evaluate().isNotEmpty) break;
+      }
 
       // Scroll through the list in chunks
       final listView = find.byType(ListView);
