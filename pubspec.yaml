@@ -1,5 +1,5 @@
 name: graphite
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 description: A modern, local-first note-taking app inspired by Obsidian.
 
@@ -17,6 +17,7 @@ dependencies:
   flutter_lints: ^5.0.0
   get_it: ^9.2.1
   flutter_markdown: ^0.7.7+1
+  markdown: ^7.3.1
 
 dev_dependencies:
   flutter_test:

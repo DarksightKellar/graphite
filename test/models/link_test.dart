@@ -2,17 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:graphite/models/link.dart';
 
 void main() {
-  final sampleJson = <String, dynamic>{
-    'from_note_id': 'note-123',
-    'to_note_title': 'Project Alpha',
-    'weight': 3,
-  };
+  final sampleJson = <String, dynamic>{'from_note_id': 'note-123', 'to_note_title': 'Project Alpha', 'weight': 3};
 
-  final sampleLink = Link(
-    fromNoteId: 'note-123',
-    toNoteTitle: 'Project Alpha',
-    weight: 3,
-  );
+  final sampleLink = const Link(fromNoteId: 'note-123', toNoteTitle: 'Project Alpha', weight: 3);
 
   group('Link.fromJson', () {
     test('parses all fields from JSON map', () {
@@ -24,10 +16,7 @@ void main() {
     });
 
     test('defaults weight to 1 when missing from JSON', () {
-      final json = <String, dynamic>{
-        'from_note_id': 'note-1',
-        'to_note_title': 'Other Note',
-      };
+      final json = <String, dynamic>{'from_note_id': 'note-1', 'to_note_title': 'Other Note'};
 
       final link = Link.fromJson(json);
 
@@ -37,11 +26,7 @@ void main() {
     });
 
     test('defaults weight to 1 when null in JSON', () {
-      final json = <String, dynamic>{
-        'from_note_id': 'note-1',
-        'to_note_title': 'Other Note',
-        'weight': null,
-      };
+      final json = <String, dynamic>{'from_note_id': 'note-1', 'to_note_title': 'Other Note', 'weight': null};
 
       final link = Link.fromJson(json);
 
@@ -49,11 +34,7 @@ void main() {
     });
 
     test('handles zero weight', () {
-      final json = <String, dynamic>{
-        'from_note_id': 'a',
-        'to_note_title': 'b',
-        'weight': 0,
-      };
+      final json = <String, dynamic>{'from_note_id': 'a', 'to_note_title': 'b', 'weight': 0};
 
       final link = Link.fromJson(json);
 
@@ -73,11 +54,7 @@ void main() {
     });
 
     test('handles empty string fields', () {
-      final json = <String, dynamic>{
-        'from_note_id': '',
-        'to_note_title': '',
-        'weight': 1,
-      };
+      final json = <String, dynamic>{'from_note_id': '', 'to_note_title': '', 'weight': 1};
 
       final link = Link.fromJson(json);
 
@@ -105,7 +82,7 @@ void main() {
     });
 
     test('serializes link with default weight', () {
-      final link = Link(fromNoteId: 'a', toNoteTitle: 'b');
+      final link = const Link(fromNoteId: 'a', toNoteTitle: 'b');
       final json = link.toJson();
 
       expect(json['from_note_id'], equals('a'));
@@ -148,11 +125,7 @@ void main() {
     });
 
     test('updates all fields', () {
-      final copy = sampleLink.copyWith(
-        fromNoteId: 'new-from',
-        toNoteTitle: 'New Title',
-        weight: 99,
-      );
+      final copy = sampleLink.copyWith(fromNoteId: 'new-from', toNoteTitle: 'New Title', weight: 99);
 
       expect(copy.fromNoteId, equals('new-from'));
       expect(copy.toNoteTitle, equals('New Title'));
@@ -162,43 +135,43 @@ void main() {
 
   group('Link equality', () {
     test('links with same fromNoteId and toNoteTitle are equal', () {
-      final a = Link(fromNoteId: 'n1', toNoteTitle: 'T', weight: 1);
-      final b = Link(fromNoteId: 'n1', toNoteTitle: 'T', weight: 99);
+      final a = const Link(fromNoteId: 'n1', toNoteTitle: 'T', weight: 1);
+      final b = const Link(fromNoteId: 'n1', toNoteTitle: 'T', weight: 99);
 
       expect(a, equals(b));
     });
 
     test('links with different fromNoteId are not equal', () {
-      final a = Link(fromNoteId: 'n1', toNoteTitle: 'T');
-      final b = Link(fromNoteId: 'n2', toNoteTitle: 'T');
+      final a = const Link(fromNoteId: 'n1', toNoteTitle: 'T');
+      final b = const Link(fromNoteId: 'n2', toNoteTitle: 'T');
 
       expect(a, isNot(equals(b)));
     });
 
     test('links with different toNoteTitle are not equal', () {
-      final a = Link(fromNoteId: 'n1', toNoteTitle: 'T1');
-      final b = Link(fromNoteId: 'n1', toNoteTitle: 'T2');
+      final a = const Link(fromNoteId: 'n1', toNoteTitle: 'T1');
+      final b = const Link(fromNoteId: 'n1', toNoteTitle: 'T2');
 
       expect(a, isNot(equals(b)));
     });
 
     test('hashCode combines fromNoteId and toNoteTitle', () {
-      final a = Link(fromNoteId: 'n1', toNoteTitle: 'T1');
-      final b = Link(fromNoteId: 'n1', toNoteTitle: 'T1');
+      final a = const Link(fromNoteId: 'n1', toNoteTitle: 'T1');
+      final b = const Link(fromNoteId: 'n1', toNoteTitle: 'T1');
 
       expect(a.hashCode, equals(b.hashCode));
     });
 
     test('hashCode differs when fromNoteId differs', () {
-      final a = Link(fromNoteId: 'n1', toNoteTitle: 'T');
-      final b = Link(fromNoteId: 'n2', toNoteTitle: 'T');
+      final a = const Link(fromNoteId: 'n1', toNoteTitle: 'T');
+      final b = const Link(fromNoteId: 'n2', toNoteTitle: 'T');
 
       expect(a.hashCode, isNot(equals(b.hashCode)));
     });
 
     test('hashCode differs when toNoteTitle differs', () {
-      final a = Link(fromNoteId: 'n1', toNoteTitle: 'T1');
-      final b = Link(fromNoteId: 'n1', toNoteTitle: 'T2');
+      final a = const Link(fromNoteId: 'n1', toNoteTitle: 'T1');
+      final b = const Link(fromNoteId: 'n1', toNoteTitle: 'T2');
 
       expect(a.hashCode, isNot(equals(b.hashCode)));
     });
@@ -220,7 +193,7 @@ void main() {
     });
 
     test('shows weight of 1 for default link', () {
-      final str = Link(fromNoteId: 'a', toNoteTitle: 'b').toString();
+      final str = const Link(fromNoteId: 'a', toNoteTitle: 'b').toString();
 
       expect(str, contains('weight: 1'));
     });
@@ -228,7 +201,7 @@ void main() {
 
   group('Link default constructor', () {
     test('default weight is 1', () {
-      final link = Link(fromNoteId: 'a', toNoteTitle: 'b');
+      final link = const Link(fromNoteId: 'a', toNoteTitle: 'b');
 
       expect(link.fromNoteId, equals('a'));
       expect(link.toNoteTitle, equals('b'));
@@ -265,10 +238,7 @@ void main() {
     });
 
     test('constructor creates batch with provided links', () {
-      final links = [
-        Link(fromNoteId: 'a', toNoteTitle: 'X'),
-        Link(fromNoteId: 'b', toNoteTitle: 'Y'),
-      ];
+      final links = [const Link(fromNoteId: 'a', toNoteTitle: 'X'), const Link(fromNoteId: 'b', toNoteTitle: 'Y')];
       final batch = LinksBatch(links: links);
 
       expect(batch.links, equals(links));

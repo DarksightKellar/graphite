@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:graphite/models/note.dart';
 import 'package:graphite/usecases/delete_note_use_case.dart';
@@ -55,11 +54,7 @@ void main() {
     group('single', () {
       test('deletes note by id', () async {
         // Arrange
-        final note = _makeNote(
-          id: 'abc-123',
-          path: 'my-note',
-          content: 'Hello',
-        );
+        final note = _makeNote(id: 'abc-123', path: 'my-note', content: 'Hello');
         repo.notes.add(note);
 
         // Act
@@ -100,28 +95,17 @@ void main() {
         expect(repo.notes, isEmpty);
       });
 
-      test(
-        'returns count of deleted (handles nonexistent ids silently)',
-        () async {
-          // Arrange
-          repo.notes.addAll([
-            _makeNote(id: 'a', path: 'alpha'),
-            _makeNote(id: 'b', path: 'beta'),
-          ]);
+      test('returns count of deleted (handles nonexistent ids silently)', () async {
+        // Arrange
+        repo.notes.addAll([_makeNote(id: 'a', path: 'alpha'), _makeNote(id: 'b', path: 'beta')]);
 
-          // Act — 'c' and 'd' are nonexistent; they should be no-ops
-          final count = await useCase.bulk([
-            'a',
-            'nonexistent',
-            'b',
-            'also-gone',
-          ]);
+        // Act — 'c' and 'd' are nonexistent; they should be no-ops
+        final count = await useCase.bulk(['a', 'nonexistent', 'b', 'also-gone']);
 
-          // Assert — only 2 of the 4 IDs were real, so count = 2
-          expect(count, 2);
-          expect(repo.notes, isEmpty);
-        },
-      );
+        // Assert — only 2 of the 4 IDs were real, so count = 2
+        expect(count, 2);
+        expect(repo.notes, isEmpty);
+      });
 
       test('still completes when some deletions fail', () async {
         // Arrange

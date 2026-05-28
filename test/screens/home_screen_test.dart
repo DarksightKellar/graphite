@@ -43,14 +43,11 @@ void main() {
         ),
         GoRoute(
           path: '/editor/:id',
-          builder: (_, state) =>
-              const Scaffold(body: Text('Editor')),
+          builder: (_, state) => const Scaffold(body: Text('Editor')),
         ),
       ],
     );
-    return MaterialApp.router(
-      routerConfig: router,
-    );
+    return MaterialApp.router(routerConfig: router);
   }
 
   /// Pump enough frames for async DB operations to settle.
@@ -60,12 +57,9 @@ void main() {
     }
   }
 
-  Note _makeNote(String title, String bodySnippet,
-      {List<String> tags = const [], DateTime? date}) {
+  Note makeNote(String title, String bodySnippet, {List<String> tags = const [], DateTime? date}) {
     final now = date ?? DateTime.now();
-    final content = bodySnippet.isNotEmpty
-        ? '# $title\n\n$bodySnippet'
-        : '# $title';
+    final content = bodySnippet.isNotEmpty ? '# $title\n\n$bodySnippet' : '# $title';
     final id = title.hashCode.toString();
     return Note(
       id: id,
@@ -96,8 +90,7 @@ void main() {
       expect(find.text('Home'), findsOneWidget);
     });
 
-    testWidgets('shows Search Results label when query is non-empty',
-        (tester) async {
+    testWidgets('shows Search Results label when query is non-empty', (tester) async {
       await tester.pumpWidget(buildApp());
 
       await tester.enterText(find.byType(TextField), 'test');
@@ -120,8 +113,8 @@ void main() {
     });
 
     testWidgets('tapping clear button resets search', (tester) async {
-      fakeRepo.notes.add(_makeNote('Alpha', 'Findable note.'));
-      fakeRepo.notes.add(_makeNote('Beta', 'Nothing here.'));
+      fakeRepo.notes.add(makeNote('Alpha', 'Findable note.'));
+      fakeRepo.notes.add(makeNote('Beta', 'Nothing here.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -140,8 +133,8 @@ void main() {
     });
 
     testWidgets('debounces search by 300ms', (tester) async {
-      fakeRepo.notes.add(_makeNote('Alpha', 'Findable note.'));
-      fakeRepo.notes.add(_makeNote('Beta', 'Nothing here.'));
+      fakeRepo.notes.add(makeNote('Alpha', 'Findable note.'));
+      fakeRepo.notes.add(makeNote('Beta', 'Nothing here.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -175,8 +168,7 @@ void main() {
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
 
-      expect(find.text('No notes yet. Tap + to create your first note.'),
-          findsOneWidget);
+      expect(find.text('No notes yet. Tap + to create your first note.'), findsOneWidget);
       expect(find.byIcon(Icons.note_add_outlined), findsOneWidget);
     });
 
@@ -192,7 +184,7 @@ void main() {
 
   group('note list', () {
     testWidgets('displays note title extracted from content', (tester) async {
-      fakeRepo.notes.add(_makeNote('Hello World', 'Body content.'));
+      fakeRepo.notes.add(makeNote('Hello World', 'Body content.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -201,19 +193,17 @@ void main() {
     });
 
     testWidgets('displays snippet on note card', (tester) async {
-      fakeRepo.notes.add(_makeNote('Title',
-          'First line of content after the heading.'));
+      fakeRepo.notes.add(makeNote('Title', 'First line of content after the heading.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
 
-      expect(find.text('First line of content after the heading.'),
-          findsOneWidget);
+      expect(find.text('First line of content after the heading.'), findsOneWidget);
     });
 
     testWidgets('displays date on note card', (tester) async {
       final date = DateTime(2025, 6, 15, 14, 30);
-      fakeRepo.notes.add(_makeNote('Dated Note', 'With date.', date: date));
+      fakeRepo.notes.add(makeNote('Dated Note', 'With date.', date: date));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -224,8 +214,7 @@ void main() {
     });
 
     testWidgets('displays tag chips on note card', (tester) async {
-      fakeRepo.notes.add(
-          _makeNote('Tagged', 'Has tags.', tags: const ['#work', '#flutter']));
+      fakeRepo.notes.add(makeNote('Tagged', 'Has tags.', tags: const ['#work', '#flutter']));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -235,7 +224,7 @@ void main() {
     });
 
     testWidgets('no tag chips when note has no tags', (tester) async {
-      fakeRepo.notes.add(_makeNote('Plain', 'No tags.', tags: const []));
+      fakeRepo.notes.add(makeNote('Plain', 'No tags.', tags: const []));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -248,7 +237,7 @@ void main() {
 
   group('card styling', () {
     testWidgets('note cards have subtle elevation', (tester) async {
-      fakeRepo.notes.add(_makeNote('Styled Card', 'Has shadow.'));
+      fakeRepo.notes.add(makeNote('Styled Card', 'Has shadow.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -262,16 +251,13 @@ void main() {
 
   group('date formatting', () {
     String monthAbbr(DateTime d) {
-      const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       return months[d.month - 1];
     }
 
     testWidgets('shows "Today" for notes updated today', (tester) async {
       final today = DateTime.now();
-      fakeRepo.notes.add(_makeNote('Fresh Note', 'Just now.', date: today));
+      fakeRepo.notes.add(makeNote('Fresh Note', 'Just now.', date: today));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -281,7 +267,7 @@ void main() {
 
     testWidgets('shows "Yesterday" for notes updated yesterday', (tester) async {
       final yesterday = DateTime.now().subtract(const Duration(days: 1));
-      fakeRepo.notes.add(_makeNote('Day Old', 'From yesterday.', date: yesterday));
+      fakeRepo.notes.add(makeNote('Day Old', 'From yesterday.', date: yesterday));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -292,7 +278,7 @@ void main() {
     testWidgets('shows "Mon DD" for dates earlier this year', (tester) async {
       // Use a date 3 days ago to avoid Today/Yesterday
       final recent = DateTime.now().subtract(const Duration(days: 3));
-      fakeRepo.notes.add(_makeNote('Recent', 'This week.', date: recent));
+      fakeRepo.notes.add(makeNote('Recent', 'This week.', date: recent));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -306,7 +292,7 @@ void main() {
 
     testWidgets('shows "Mon DD, YYYY" for dates from prior years', (tester) async {
       final oldDate = DateTime(2024, 3, 10);
-      fakeRepo.notes.add(_makeNote('Archive', 'Last year.', date: oldDate));
+      fakeRepo.notes.add(makeNote('Archive', 'Last year.', date: oldDate));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -321,12 +307,9 @@ void main() {
 
   group('sort', () {
     testWidgets('default sort is by date modified descending', (tester) async {
-      fakeRepo.notes.add(_makeNote('Oldest', 'Older.',
-          date: DateTime(2025, 1, 1)));
-      fakeRepo.notes.add(_makeNote('Middle', 'Middle.',
-          date: DateTime(2025, 6, 15)));
-      fakeRepo.notes.add(_makeNote('Newest', 'Newest.',
-          date: DateTime(2025, 12, 31)));
+      fakeRepo.notes.add(makeNote('Oldest', 'Older.', date: DateTime(2025, 1, 1)));
+      fakeRepo.notes.add(makeNote('Middle', 'Middle.', date: DateTime(2025, 6, 15)));
+      fakeRepo.notes.add(makeNote('Newest', 'Newest.', date: DateTime(2025, 12, 31)));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -336,14 +319,11 @@ void main() {
       expect(titles, findsOneWidget);
     });
 
-    testWidgets('sort by title A-Z reorders notes alphabetically',
-        (tester) async {
+    testWidgets('sort by title A-Z reorders notes alphabetically', (tester) async {
       final baseDate = DateTime(2025, 1, 1);
-      fakeRepo.notes.add(_makeNote('Banana', 'Content.', date: baseDate));
-      fakeRepo.notes.add(_makeNote('Apple', 'Content.',
-          date: baseDate.add(const Duration(days: 1))));
-      fakeRepo.notes.add(_makeNote('Cherry', 'Content.',
-          date: baseDate.add(const Duration(days: 2))));
+      fakeRepo.notes.add(makeNote('Banana', 'Content.', date: baseDate));
+      fakeRepo.notes.add(makeNote('Apple', 'Content.', date: baseDate.add(const Duration(days: 1))));
+      fakeRepo.notes.add(makeNote('Cherry', 'Content.', date: baseDate.add(const Duration(days: 2))));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -362,16 +342,13 @@ void main() {
       // Verify Apple is before Banana in widget order
       final appleFinder = find.text('Apple');
       final bananaFinder = find.text('Banana');
-      expect(tester.getTopLeft(appleFinder).dy,
-          lessThan(tester.getTopLeft(bananaFinder).dy));
+      expect(tester.getTopLeft(appleFinder).dy, lessThan(tester.getTopLeft(bananaFinder).dy));
     });
 
-    testWidgets('sort by title Z-A reorders notes reverse alphabetically',
-        (tester) async {
+    testWidgets('sort by title Z-A reorders notes reverse alphabetically', (tester) async {
       final baseDate = DateTime(2025, 1, 1);
-      fakeRepo.notes.add(_makeNote('Banana', 'Content.', date: baseDate));
-      fakeRepo.notes.add(_makeNote('Apple', 'Content.',
-          date: baseDate.add(const Duration(days: 1))));
+      fakeRepo.notes.add(makeNote('Banana', 'Content.', date: baseDate));
+      fakeRepo.notes.add(makeNote('Apple', 'Content.', date: baseDate.add(const Duration(days: 1))));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -385,22 +362,17 @@ void main() {
       // Banana should appear before Apple (reverse alphabetical)
       final bananaFinder = find.text('Banana');
       final appleFinder = find.text('Apple');
-      expect(tester.getTopLeft(bananaFinder).dy,
-          lessThan(tester.getTopLeft(appleFinder).dy));
+      expect(tester.getTopLeft(bananaFinder).dy, lessThan(tester.getTopLeft(appleFinder).dy));
     });
   });
 
   // ── Filter ───────────────────────────────────────────────────────────
 
   group('filter', () {
-    testWidgets('filter by tag shows only notes with that tag',
-        (tester) async {
-      fakeRepo.notes.add(_makeNote('Work Note', 'Content.',
-          tags: const ['work']));
-      fakeRepo.notes.add(_makeNote('Personal Note', 'Content.',
-          tags: const ['personal']));
-      fakeRepo.notes.add(_makeNote('Both', 'Content.',
-          tags: const ['work', 'personal']));
+    testWidgets('filter by tag shows only notes with that tag', (tester) async {
+      fakeRepo.notes.add(makeNote('Work Note', 'Content.', tags: const ['work']));
+      fakeRepo.notes.add(makeNote('Personal Note', 'Content.', tags: const ['personal']));
+      fakeRepo.notes.add(makeNote('Both', 'Content.', tags: const ['work', 'personal']));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -422,28 +394,31 @@ void main() {
       expect(find.text('All Notes'), findsNothing); // menu closed
     });
 
-    testWidgets('filter by links shows only notes with wiki-links',
-        (tester) async {
+    testWidgets('filter by links shows only notes with wiki-links', (tester) async {
       final linkedId = 'linked'.hashCode.toString();
       final noLinkId = 'nolink'.hashCode.toString();
-      fakeRepo.notes.add(Note(
-        id: linkedId,
-        path: 'Linked Note',
-        filePath: '',
-        createdAt: DateTime(2025, 1, 1),
-        updatedAt: DateTime(2025, 6, 1),
-        content: '# Linked Note\n\nSee [[Target Page]] for more.',
-        tags: const [],
-      ));
-      fakeRepo.notes.add(Note(
-        id: noLinkId,
-        path: 'Plain Note',
-        filePath: '',
-        createdAt: DateTime(2025, 1, 1),
-        updatedAt: DateTime(2025, 6, 1),
-        content: '# Plain Note\n\nJust text, no links.',
-        tags: const [],
-      ));
+      fakeRepo.notes.add(
+        Note(
+          id: linkedId,
+          path: 'Linked Note',
+          filePath: '',
+          createdAt: DateTime(2025, 1, 1),
+          updatedAt: DateTime(2025, 6, 1),
+          content: '# Linked Note\n\nSee [[Target Page]] for more.',
+          tags: const [],
+        ),
+      );
+      fakeRepo.notes.add(
+        Note(
+          id: noLinkId,
+          path: 'Plain Note',
+          filePath: '',
+          createdAt: DateTime(2025, 1, 1),
+          updatedAt: DateTime(2025, 6, 1),
+          content: '# Plain Note\n\nJust text, no links.',
+          tags: const [],
+        ),
+      );
       fakeRepo.addLinks(linkedId, {'Target Page'});
 
       await tester.pumpWidget(buildApp());
@@ -469,7 +444,7 @@ void main() {
 
   group('swipe', () {
     testWidgets('swipe left on card shows delete confirmation', (tester) async {
-      fakeRepo.notes.add(_makeNote('Swipe Me', 'Delete me.'));
+      fakeRepo.notes.add(makeNote('Swipe Me', 'Delete me.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -487,7 +462,7 @@ void main() {
     });
 
     testWidgets('confirming swipe delete removes note', (tester) async {
-      fakeRepo.notes.add(_makeNote('Gone Swipe', 'Will be deleted.'));
+      fakeRepo.notes.add(makeNote('Gone Swipe', 'Will be deleted.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -506,7 +481,7 @@ void main() {
     });
 
     testWidgets('swipe right pins a note', (tester) async {
-      fakeRepo.notes.add(_makeNote('Pin Me', 'Pin this note.'));
+      fakeRepo.notes.add(makeNote('Pin Me', 'Pin this note.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -524,7 +499,7 @@ void main() {
 
   group('selection mode', () {
     testWidgets('long-press enters selection mode', (tester) async {
-      fakeRepo.notes.add(_makeNote('Select Me', 'First note.'));
+      fakeRepo.notes.add(makeNote('Select Me', 'First note.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -537,10 +512,9 @@ void main() {
       expect(find.byIcon(Icons.delete_outline), findsOneWidget);
     });
 
-    testWidgets('tapping another note in selection mode adds it',
-        (tester) async {
-      fakeRepo.notes.add(_makeNote('First', 'One.'));
-      fakeRepo.notes.add(_makeNote('Second', 'Two.'));
+    testWidgets('tapping another note in selection mode adds it', (tester) async {
+      fakeRepo.notes.add(makeNote('First', 'One.'));
+      fakeRepo.notes.add(makeNote('Second', 'Two.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -556,10 +530,9 @@ void main() {
       expect(find.text('2 selected'), findsOneWidget);
     });
 
-    testWidgets('bulk delete in selection mode removes selected notes',
-        (tester) async {
-      fakeRepo.notes.add(_makeNote('Keep', 'Stay.'));
-      fakeRepo.notes.add(_makeNote('Remove', 'Go.'));
+    testWidgets('bulk delete in selection mode removes selected notes', (tester) async {
+      fakeRepo.notes.add(makeNote('Keep', 'Stay.'));
+      fakeRepo.notes.add(makeNote('Remove', 'Go.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -585,8 +558,8 @@ void main() {
 
   group('search filter', () {
     testWidgets('filters notes by content match', (tester) async {
-      fakeRepo.notes.add(_makeNote('Alpha', 'Contains unique word xylophone.'));
-      fakeRepo.notes.add(_makeNote('Beta', 'Just ordinary.'));
+      fakeRepo.notes.add(makeNote('Alpha', 'Contains unique word xylophone.'));
+      fakeRepo.notes.add(makeNote('Beta', 'Just ordinary.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -601,9 +574,8 @@ void main() {
       expect(find.text('Beta'), findsNothing);
     });
 
-    testWidgets('shows no-results message for unmatched search',
-        (tester) async {
-      fakeRepo.notes.add(_makeNote('Only', 'Nothing here.'));
+    testWidgets('shows no-results message for unmatched search', (tester) async {
+      fakeRepo.notes.add(makeNote('Only', 'Nothing here.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -615,8 +587,8 @@ void main() {
     });
 
     testWidgets('clearing search restores full list', (tester) async {
-      fakeRepo.notes.add(_makeNote('A', 'First.'));
-      fakeRepo.notes.add(_makeNote('B', 'Second.'));
+      fakeRepo.notes.add(makeNote('A', 'First.'));
+      fakeRepo.notes.add(makeNote('B', 'Second.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -637,7 +609,7 @@ void main() {
 
   group('navigation', () {
     testWidgets('tapping a note navigates to editor', (tester) async {
-      fakeRepo.notes.add(_makeNote('Navigate Here', 'Tap this note.'));
+      fakeRepo.notes.add(makeNote('Navigate Here', 'Tap this note.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -653,7 +625,7 @@ void main() {
 
   group('delete', () {
     testWidgets('long-press enters selection mode', (tester) async {
-      fakeRepo.notes.add(_makeNote('Delete Me', 'Will be deleted.'));
+      fakeRepo.notes.add(makeNote('Delete Me', 'Will be deleted.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -666,17 +638,15 @@ void main() {
       expect(find.byIcon(Icons.delete_outline), findsOneWidget);
     });
 
-    testWidgets('confirming swipe delete removes note from list',
-        (tester) async {
-      fakeRepo.notes.add(_makeNote('Gone', 'Will disappear.'));
+    testWidgets('confirming swipe delete removes note from list', (tester) async {
+      fakeRepo.notes.add(makeNote('Gone', 'Will disappear.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
 
       expect(find.text('Gone'), findsOneWidget);
 
-      await tester.fling(
-          find.byType(Dismissible), const Offset(-200, 0), 1000);
+      await tester.fling(find.byType(Dismissible), const Offset(-200, 0), 1000);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Delete'));
       await pumpUntilSettled(tester);
@@ -688,9 +658,8 @@ void main() {
   // ── Pull to refresh ─────────────────────────────────────────────────
 
   group('pull to refresh', () {
-    testWidgets('RefreshIndicator is present when notes exist',
-        (tester) async {
-      fakeRepo.notes.add(_makeNote('Item', 'Content here.'));
+    testWidgets('RefreshIndicator is present when notes exist', (tester) async {
+      fakeRepo.notes.add(makeNote('Item', 'Content here.'));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -698,8 +667,7 @@ void main() {
       expect(find.byType(RefreshIndicator), findsOneWidget);
     });
 
-    testWidgets('RefreshIndicator not shown in empty state',
-        (tester) async {
+    testWidgets('RefreshIndicator not shown in empty state', (tester) async {
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
 
@@ -711,10 +679,8 @@ void main() {
 
   group('tag filter banner', () {
     testWidgets('banner shows when tag filter is active', (tester) async {
-      fakeRepo.notes.add(_makeNote('Work Note', 'Content.',
-          tags: const ['work']));
-      fakeRepo.notes.add(_makeNote('Other Note', 'Content.',
-          tags: const ['other']));
+      fakeRepo.notes.add(makeNote('Work Note', 'Content.', tags: const ['work']));
+      fakeRepo.notes.add(makeNote('Other Note', 'Content.', tags: const ['other']));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);
@@ -734,8 +700,7 @@ void main() {
     });
 
     testWidgets('banner hides when tag filter is cleared', (tester) async {
-      fakeRepo.notes.add(_makeNote('Work Note', 'Content.',
-          tags: const ['work']));
+      fakeRepo.notes.add(makeNote('Work Note', 'Content.', tags: const ['work']));
 
       await tester.pumpWidget(buildApp());
       await pumpUntilSettled(tester);

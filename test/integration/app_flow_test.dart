@@ -23,7 +23,7 @@ void main() {
   late DeleteNoteUseCase deleteNoteUseCase;
   late SaveNoteUseCase saveNoteUseCase;
   late NavigateLinkUseCase navigateLinkUseCase;
-  GoRouter? _router;
+  GoRouter? router0;
 
   setUp(() {
     fakeRepo = FakeNoteRepository();
@@ -47,8 +47,7 @@ void main() {
         ),
         GoRoute(
           path: '/tags',
-          builder: (_, __) =>
-              TagBrowserScreen(noteListUseCase: noteListUseCase),
+          builder: (_, __) => TagBrowserScreen(noteListUseCase: noteListUseCase),
         ),
         GoRoute(
           path: '/editor/:id',
@@ -60,10 +59,8 @@ void main() {
         ),
       ],
     );
-    _router = router;
-    return MaterialApp.router(
-      routerConfig: router,
-    );
+    router0 = router;
+    return MaterialApp.router(routerConfig: router);
   }
 
   Future<void> settle(WidgetTester t) async {
@@ -77,11 +74,7 @@ void main() {
     await t.pump(const Duration(milliseconds: 100));
   }
 
-  Future<Note> mkNote({
-    required String path,
-    required String content,
-    List<String> tags = const [],
-  }) async {
+  Future<Note> mkNote({required String path, required String content, List<String> tags = const []}) async {
     final n = Note(
       id: '',
       path: path,
@@ -98,19 +91,14 @@ void main() {
   // Flow 1: First launch → first note
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 1: quick capture → note in list → tap opens editor', (
-    tester,
-  ) async {
+  testWidgets('Flow 1: quick capture → note in list → tap opens editor', (tester) async {
     addTearDown(() => dismissTimers(tester));
 
     await tester.pumpWidget(buildApp());
     await settle(tester);
 
     // Empty state
-    expect(
-      find.text('No notes yet. Tap + to create your first note.'),
-      findsOneWidget,
-    );
+    expect(find.text('No notes yet. Tap + to create your first note.'), findsOneWidget);
 
     // Tap FAB
     await tester.tap(find.byType(FloatingActionButton));
@@ -133,7 +121,7 @@ void main() {
     // Navigate to editor via GoRouter
     final notes = await fakeRepo.listAllNotes();
     final id = notes.first.id;
-    _router!.go('/editor/$id');
+    router0!.go('/editor/$id');
     await settle(tester);
 
     // Editor screen
@@ -147,10 +135,7 @@ void main() {
   testWidgets('Flow 2: edit and auto-save persist via DB only', (tester) async {
     addTearDown(() => dismissTimers(tester));
 
-    final note = await mkNote(
-      path: 'Edit Test',
-      content: '# Edit Test\n\nOriginal content.',
-    );
+    final note = await mkNote(path: 'Edit Test', content: '# Edit Test\n\nOriginal content.');
 
     await tester.pumpWidget(buildApp());
     await settle(tester);
@@ -164,10 +149,7 @@ void main() {
 
     // Edit content using descendant finder (the TextField is inside EditorPane)
     final editorPane = find.byType(EditorPane);
-    final textField = find.descendant(
-      of: editorPane,
-      matching: find.byType(TextField),
-    );
+    final textField = find.descendant(of: editorPane, matching: find.byType(TextField));
     await tester.enterText(textField, '# Edit Test\n\nUpdated content.');
     await tester.pump();
 
@@ -183,9 +165,7 @@ void main() {
   // Flow 3: Search
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 3: search filters notes, clear restores all', (
-    tester,
-  ) async {
+  testWidgets('Flow 3: search filters notes, clear restores all', (tester) async {
     addTearDown(() => dismissTimers(tester));
 
     await mkNote(path: 'Alpha', content: '# Alpha\n\nLighthouse keeper logs.');
@@ -222,9 +202,7 @@ void main() {
   // Flow 4: Tag
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 4: tagged note → browse tags → tap tag filters', (
-    tester,
-  ) async {
+  testWidgets('Flow 4: tagged note → browse tags → tap tag filters', (tester) async {
     addTearDown(() => dismissTimers(tester));
 
     await mkNote(
@@ -232,11 +210,7 @@ void main() {
       content: '# Tagged Note\n\nThis one has an #important tag.',
       tags: ['#important'],
     );
-    await mkNote(
-      path: 'Plain Note',
-      content: '# Plain Note\n\nJust a regular note.',
-      tags: [],
-    );
+    await mkNote(path: 'Plain Note', content: '# Plain Note\n\nJust a regular note.', tags: []);
 
     await tester.pumpWidget(buildApp());
     await settle(tester);
@@ -273,15 +247,10 @@ void main() {
   // Flow 5: Wiki-link
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 5: wiki-link tap prompts create, link navigates', (
-    tester,
-  ) async {
+  testWidgets('Flow 5: wiki-link tap prompts create, link navigates', (tester) async {
     addTearDown(() => dismissTimers(tester));
 
-    final noteA = await mkNote(
-      path: 'Note A',
-      content: '# Note A\n\nSee [[Note B]] for more details.',
-    );
+    final noteA = await mkNote(path: 'Note A', content: '# Note A\n\nSee [[Note B]] for more details.');
     await fakeRepo.extractLinks(noteA.id, noteA.content);
 
     await tester.pumpWidget(buildApp());
@@ -312,15 +281,10 @@ void main() {
   // Flow 6: Delete
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 6: long-press delete, confirm, note removed', (
-    tester,
-  ) async {
+  testWidgets('Flow 6: long-press delete, confirm, note removed', (tester) async {
     addTearDown(() => dismissTimers(tester));
 
-    await mkNote(
-      path: 'Delete Me',
-      content: '# Delete Me\n\nThis note will be deleted.',
-    );
+    await mkNote(path: 'Delete Me', content: '# Delete Me\n\nThis note will be deleted.');
 
     await tester.pumpWidget(buildApp());
     await settle(tester);

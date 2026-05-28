@@ -866,7 +866,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _navigateToTags() async {
     final tag = await context.push<String>('/tags');
-    if (tag != null && tag is String && mounted) {
+    if (tag != null && mounted) {
       filterByTag(tag);
     }
   }

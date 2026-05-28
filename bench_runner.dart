@@ -7,7 +7,6 @@
 import 'dart:math';
 import 'dart:async';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite/sqflite.dart';
 
 // Replicate the database schema and methods from GraphiteDB
 // to benchmark without Flutter dependencies.

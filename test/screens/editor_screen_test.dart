@@ -19,26 +19,19 @@ void main() {
     navigateLinkUseCase = NavigateLinkUseCase(fakeRepo);
   });
 
-  Widget _wrap(EditorScreen screen) {
-    return MaterialApp(
-      home: screen,
-    );
+  Widget wrap(EditorScreen screen) {
+    return MaterialApp(home: screen);
   }
 
   /// Create a test note in the fake DB and return its id.
-  String _createNote({
-    String path = 'Test Note',
-    String content = '',
-  }) {
+  String createNote({String path = 'Test Note', String content = ''}) {
     final note = Note(
       id: '',
       path: path,
       filePath: '$path.md',
       createdAt: DateTime(2025, 6, 1),
       updatedAt: DateTime(2025, 6, 1),
-      content: content.isNotEmpty
-          ? content
-          : '# $path\n\nSome **markdown** content with #tag1 and [[OtherPage]].',
+      content: content.isNotEmpty ? content : '# $path\n\nSome **markdown** content with #tag1 and [[OtherPage]].',
       tags: const ['tag1'],
     );
     final id = path.hashCode.toString();
@@ -71,9 +64,11 @@ void main() {
 
   group('rendering', () {
     testWidgets('renders with existing note content', (tester) async {
-      final noteId = _createNote();
+      final noteId = createNote();
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)));
+      await tester.pumpWidget(
+        wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)),
+      );
       await pumpUntilSettled(tester);
 
       expect(find.byType(EditorPane), findsOneWidget);
@@ -83,9 +78,15 @@ void main() {
     });
 
     testWidgets('renders empty for new note (non-existent id)', (tester) async {
-      await tester.pumpWidget(_wrap(
-        EditorScreen(noteId: 'new-note-id', saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase),
-      ));
+      await tester.pumpWidget(
+        wrap(
+          EditorScreen(
+            noteId: 'new-note-id',
+            saveNoteUseCase: saveNoteUseCase,
+            navigateLinkUseCase: navigateLinkUseCase,
+          ),
+        ),
+      );
       await pumpUntilSettled(tester);
 
       expect(find.byType(EditorPane), findsOneWidget);
@@ -98,18 +99,17 @@ void main() {
 
   group('typing updates preview', () {
     testWidgets('typing in editor updates preview content', (tester) async {
-      final noteId = _createNote();
+      final noteId = createNote();
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)));
+      await tester.pumpWidget(
+        wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)),
+      );
       await pumpUntilSettled(tester);
 
       final editorPane = find.byType(EditorPane);
       expect(editorPane, findsOneWidget);
 
-      final textField = find.descendant(
-        of: editorPane,
-        matching: find.byType(TextField),
-      );
+      final textField = find.descendant(of: editorPane, matching: find.byType(TextField));
       await tester.enterText(textField, '# Updated\n\nNew content with **bold**');
       await tester.pump();
 
@@ -120,19 +120,15 @@ void main() {
   // ── Toolbar buttons ────────────────────────────────────────────────
 
   group('toolbar buttons', () {
-    testWidgets('editor pane has toolbar when showLineNumbers is true',
-        (tester) async {
+    testWidgets('editor pane has toolbar when showLineNumbers is true', (tester) async {
       // The EditorScreen sets showLineNumbers: false on EditorPane.
       // Test toolbar presence at the EditorPane level with showLineNumbers: true.
       final controller = TextEditingController();
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: EditorPane(
-            controller: controller,
-            showLineNumbers: true,
-          ),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: EditorPane(controller: controller, showLineNumbers: true)),
         ),
-      ));
+      );
 
       expect(find.byIcon(Icons.format_bold), findsOneWidget);
       expect(find.byIcon(Icons.format_italic), findsOneWidget);
@@ -143,20 +139,14 @@ void main() {
 
     testWidgets('bold button inserts ** markup', (tester) async {
       final controller = TextEditingController();
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: EditorPane(
-            controller: controller,
-            showLineNumbers: true,
-          ),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: EditorPane(controller: controller, showLineNumbers: true)),
         ),
-      ));
+      );
 
       final editorPane = find.byType(EditorPane);
-      final textField = find.descendant(
-        of: editorPane,
-        matching: find.byType(TextField),
-      );
+      final textField = find.descendant(of: editorPane, matching: find.byType(TextField));
 
       await tester.enterText(textField, 'hello');
       await tester.pump();
@@ -164,9 +154,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.format_bold));
       await tester.pump();
 
-      final editorText = tester.widget<TextField>(
-        find.descendant(of: editorPane, matching: find.byType(TextField)),
-      );
+      final editorText = tester.widget<TextField>(find.descendant(of: editorPane, matching: find.byType(TextField)));
       expect(editorText.controller!.text.contains('**'), isTrue);
 
       controller.dispose();
@@ -176,18 +164,16 @@ void main() {
   // ── Auto-save ──────────────────────────────────────────────────────
 
   group('auto-save', () {
-    testWidgets('auto-save triggers after 2 seconds of typing pause',
-        (tester) async {
-      final noteId = _createNote();
+    testWidgets('auto-save triggers after 2 seconds of typing pause', (tester) async {
+      final noteId = createNote();
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)));
+      await tester.pumpWidget(
+        wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)),
+      );
       await pumpUntilSettled(tester);
 
       final editorPane = find.byType(EditorPane);
-      final textField = find.descendant(
-        of: editorPane,
-        matching: find.byType(TextField),
-      );
+      final textField = find.descendant(of: editorPane, matching: find.byType(TextField));
 
       await tester.enterText(textField, '# Auto-Saved\n\nContent here.');
       await tester.pump();
@@ -203,31 +189,35 @@ void main() {
   // ── Back navigation with unsaved changes ───────────────────────────
 
   group('back navigation with unsaved changes', () {
-    testWidgets('shows unsaved changes dialog when content is dirty',
-        (tester) async {
-      final noteId = _createNote();
+    testWidgets('shows unsaved changes dialog when content is dirty', (tester) async {
+      final noteId = createNote();
 
       // Wrap in a Navigator so pop goes somewhere
-      await tester.pumpWidget(MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase),
-                    ),
-                  );
-                },
-                child: const Text('Open Editor'),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EditorScreen(
+                          noteId: noteId,
+                          saveNoteUseCase: saveNoteUseCase,
+                          navigateLinkUseCase: navigateLinkUseCase,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Open Editor'),
+                ),
               ),
             ),
           ),
         ),
-      ));
+      );
 
       // Navigate to editor
       await tester.tap(find.text('Open Editor'));
@@ -236,10 +226,7 @@ void main() {
 
       // Modify content
       final editorPane = find.byType(EditorPane);
-      final textField = find.descendant(
-        of: editorPane,
-        matching: find.byType(TextField),
-      );
+      final textField = find.descendant(of: editorPane, matching: find.byType(TextField));
       await tester.enterText(textField, '# Modified Content\n\nNew text.');
       await tester.pump();
 
@@ -258,14 +245,12 @@ void main() {
   // ── Wiki-link tappable ─────────────────────────────────────────────
 
   group('wiki-link tappable', () {
-    testWidgets('[[Wiki-link]] is rendered in preview and tappable',
-        (tester) async {
-      final noteId = _createNote(
-        path: 'Link',
-        content: '# Link\n\nSee [[OtherPage]] for details.',
-      );
+    testWidgets('[[Wiki-link]] is rendered in preview and tappable', (tester) async {
+      final noteId = createNote(path: 'Link', content: '# Link\n\nSee [[OtherPage]] for details.');
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)));
+      await tester.pumpWidget(
+        wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)),
+      );
       await pumpUntilSettled(tester);
 
       expect(find.byType(PreviewPane), findsOneWidget);
@@ -277,11 +262,11 @@ void main() {
 
   group('tag highlighting', () {
     testWidgets('#tag is highlighted in preview', (tester) async {
-      final noteId = _createNote(
-        content: '# My Note\n\nContent with #important tag.',
-      );
+      final noteId = createNote(content: '# My Note\n\nContent with #important tag.');
 
-      await tester.pumpWidget(_wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)));
+      await tester.pumpWidget(
+        wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)),
+      );
       await pumpUntilSettled(tester);
 
       expect(find.byType(PreviewPane), findsOneWidget);

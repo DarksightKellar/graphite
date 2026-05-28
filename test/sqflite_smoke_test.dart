@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite/sqflite.dart';
 
 void main() {
   test('sqflite_common_ffi works in test environment', () async {
@@ -14,9 +13,7 @@ void main() {
       '$dbPath/smoke_test.db',
       version: 1,
       onCreate: (db, version) async {
-        await db.execute(
-          'CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)',
-        );
+        await db.execute('CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)');
         await db.insert('test', {'value': 'hello from smoke'});
       },
     );

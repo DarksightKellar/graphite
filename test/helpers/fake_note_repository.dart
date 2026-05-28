@@ -8,9 +8,7 @@ import 'fake_graphite_db.dart';
 class FakeNoteRepository extends NoteRepository {
   final FakeGraphiteDB fakeDb;
 
-  FakeNoteRepository._(FakeGraphiteDB db)
-      : fakeDb = db,
-        super(db);
+  FakeNoteRepository._(FakeGraphiteDB super.db) : fakeDb = db;
 
   /// Create a fake repository backed by a [FakeGraphiteDB].
   /// If no [db] is provided, creates a new empty [FakeGraphiteDB].

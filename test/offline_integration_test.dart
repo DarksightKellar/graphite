@@ -53,7 +53,7 @@ void main() {
 
   // ── Helpers ───────────────────────────────────────────────────────────
 
-  Note _note({
+  Note note({
     required String path,
     required String content,
     List<String> tags = const [],
@@ -75,8 +75,7 @@ void main() {
   // ── Offline-first verification marker ────────────────────────────────
 
   group('Offline-first guarantees', () {
-    test('database initializes without network (SQLite created locally)',
-        () async {
+    test('database initializes without network (SQLite created locally)', () async {
       // After setUp -> db.initialize(), the database should be ready.
       // Prove it by listing notes — will succeed only if DB is alive.
       final notes = await db.listNotes();
@@ -84,8 +83,7 @@ void main() {
       expect(notes.length, greaterThan(0));
     });
 
-    test('FFI backend is in use (no network-based database factory)',
-        () {
+    test('FFI backend is in use (no network-based database factory)', () {
       // sqfliteFfiInit() + databaseFactoryFfi were set in setUpAll.
       // If we're here and tests pass, the fully-offline FFI backend
       // is working; a network-backed backend wouldn't survive this
@@ -97,27 +95,20 @@ void main() {
   // ── Full note lifecycle ──────────────────────────────────────────────
 
   group('Full offline CRUD lifecycle', () {
-    test(
-        'create → read → update → search → tag-filter → link → delete '
+    test('create → read → update → search → tag-filter → link → delete '
         'all work without network', () async {
       // ── 1. Create notes ─────────────────────────────────────────
-      final alpha = await db.createNote(_note(
-        path: 'Alpha',
-        content: '# Alpha\n\nFirst note with #project and [[Beta]] links.',
-        tags: ['#project'],
-      ));
+      final alpha = await db.createNote(
+        note(path: 'Alpha', content: '# Alpha\n\nFirst note with #project and [[Beta]] links.', tags: ['#project']),
+      );
 
-      final beta = await db.createNote(_note(
-        path: 'Beta',
-        content: '# Beta\n\nLinked from Alpha, mentions #project too.',
-        tags: ['#project'],
-      ));
+      final beta = await db.createNote(
+        note(path: 'Beta', content: '# Beta\n\nLinked from Alpha, mentions #project too.', tags: ['#project']),
+      );
 
-      final gamma = await db.createNote(_note(
-        path: 'Gamma',
-        content: '# Gamma\n\nStandalone note with #personal tag.',
-        tags: ['#personal'],
-      ));
+      final gamma = await db.createNote(
+        note(path: 'Gamma', content: '# Gamma\n\nStandalone note with #personal tag.', tags: ['#personal']),
+      );
 
       expect(alpha.id, isNotEmpty);
       expect(beta.id, isNotEmpty);
@@ -135,7 +126,8 @@ void main() {
 
       // ── 3. Update a note ────────────────────────────────────────
       final updatedAlpha = alpha.copyWith(
-        content: '# Alpha Updated\n\nChanged content, still #project '
+        content:
+            '# Alpha Updated\n\nChanged content, still #project '
             'and [[Beta]] link.',
         tags: ['#project', '#updated'],
         updatedAt: DateTime.now(),
@@ -225,25 +217,16 @@ void main() {
 
   group('listNotes ordering (offline)', () {
     test('returns notes ordered by updatedAt DESC', () async {
-      await db.createNote(_note(
-        path: 'oldest',
-        content: '# Oldest',
-        updatedAt: DateTime.now().subtract(const Duration(minutes: 10)),
-      ));
-      await db.createNote(_note(
-        path: 'middle',
-        content: '# Middle',
-        updatedAt: DateTime.now().subtract(const Duration(minutes: 5)),
-      ));
-      await db.createNote(_note(
-        path: 'newest',
-        content: '# Newest',
-        updatedAt: DateTime.now(),
-      ));
+      await db.createNote(
+        note(path: 'oldest', content: '# Oldest', updatedAt: DateTime.now().subtract(const Duration(minutes: 10))),
+      );
+      await db.createNote(
+        note(path: 'middle', content: '# Middle', updatedAt: DateTime.now().subtract(const Duration(minutes: 5))),
+      );
+      await db.createNote(note(path: 'newest', content: '# Newest', updatedAt: DateTime.now()));
 
       final notes = await db.listNotes();
-      final userNotes =
-          notes.where((n) => !n.path.startsWith('Welcome')).toList();
+      final userNotes = notes.where((n) => !n.path.startsWith('Welcome')).toList();
       expect(userNotes.length, equals(3));
       expect(userNotes[0].path, equals('newest'));
       expect(userNotes[1].path, equals('middle'));

@@ -16,8 +16,7 @@ void main() {
 
   setUpAll(() async {
     sqfliteFfiInit();
-    testDbDir =
-        '${Directory.systemTemp.path}/graphite_repo_test_${DateTime.now().millisecondsSinceEpoch}';
+    testDbDir = '${Directory.systemTemp.path}/graphite_repo_test_${DateTime.now().millisecondsSinceEpoch}';
     await Directory(testDbDir).create(recursive: true);
     databaseFactory = databaseFactoryFfi;
     databaseFactoryFfi.setDatabasesPath(testDbDir);
@@ -53,8 +52,7 @@ void main() {
     }
   });
 
-  Note _testNote(String path, String content,
-      {List<String> tags = const []}) {
+  Note testNote(String path, String content, {List<String> tags = const []}) {
     final now = DateTime.now();
     return Note(
       id: '',
@@ -69,7 +67,7 @@ void main() {
 
   group('createNote', () {
     test('persists to database and file system', () async {
-      final created = await repo.createNote(_testNote('hello', '# Hello World'));
+      final created = await repo.createNote(testNote('hello', '# Hello World'));
 
       expect(created.id, isNotEmpty);
       expect(created.path, equals('hello'));
@@ -86,7 +84,7 @@ void main() {
 
     test('returns note even if file write fails (best-effort)', () async {
       // This tests the resilience of the repository — file write is best-effort
-      final created = await repo.createNote(_testNote('resilient', '# Resilient'));
+      final created = await repo.createNote(testNote('resilient', '# Resilient'));
 
       expect(created.id, isNotEmpty);
       // Database should have it regardless
@@ -97,7 +95,7 @@ void main() {
 
   group('readNote', () {
     test('reads note by id from database', () async {
-      final created = await repo.createNote(_testNote('readme', '# Read Me'));
+      final created = await repo.createNote(testNote('readme', '# Read Me'));
 
       final read = await repo.readNote(created.id);
 
@@ -116,14 +114,9 @@ void main() {
 
   group('updateNote', () {
     test('updates in database and file system', () async {
-      final created = await repo.createNote(
-        _testNote('to-update', '# Original'),
-      );
+      final created = await repo.createNote(testNote('to-update', '# Original'));
 
-      final updated = created.copyWith(
-        content: '# Updated Content',
-        updatedAt: DateTime.now(),
-      );
+      final updated = created.copyWith(content: '# Updated Content', updatedAt: DateTime.now());
       await repo.updateNote(updated);
 
       // Verify in database
@@ -138,9 +131,7 @@ void main() {
 
   group('deleteNote', () {
     test('removes from database and file system', () async {
-      final created = await repo.createNote(
-        _testNote('to-delete', '# Delete Me'),
-      );
+      final created = await repo.createNote(testNote('to-delete', '# Delete Me'));
 
       await repo.deleteNote(created.id);
 
@@ -161,24 +152,20 @@ void main() {
   group('listAllNotes', () {
     test('lists notes newest first', () async {
       final now = DateTime.now();
-      await repo.createNote(Note(
-        id: '',
-        path: 'old',
-        filePath: '/tmp/old.md',
-        createdAt: now.subtract(const Duration(minutes: 10)),
-        updatedAt: now.subtract(const Duration(minutes: 10)),
-        content: '# Old',
-        tags: [],
-      ));
-      await repo.createNote(Note(
-        id: '',
-        path: 'new',
-        filePath: '/tmp/new.md',
-        createdAt: now,
-        updatedAt: now,
-        content: '# New',
-        tags: [],
-      ));
+      await repo.createNote(
+        Note(
+          id: '',
+          path: 'old',
+          filePath: '/tmp/old.md',
+          createdAt: now.subtract(const Duration(minutes: 10)),
+          updatedAt: now.subtract(const Duration(minutes: 10)),
+          content: '# Old',
+          tags: [],
+        ),
+      );
+      await repo.createNote(
+        Note(id: '', path: 'new', filePath: '/tmp/new.md', createdAt: now, updatedAt: now, content: '# New', tags: []),
+      );
 
       final notes = await repo.listAllNotes();
       expect(notes.length, equals(2));
@@ -195,7 +182,7 @@ void main() {
 
   group('searchNotes', () {
     test('finds notes by content', () async {
-      await repo.createNote(_testNote('guide', '# User Guide\n\nGraphite tips.'));
+      await repo.createNote(testNote('guide', '# User Guide\n\nGraphite tips.'));
 
       final results = await repo.searchNotes('graphite');
 
@@ -204,7 +191,7 @@ void main() {
     });
 
     test('returns empty for no matches', () async {
-      await repo.createNote(_testNote('only', '# Only'));
+      await repo.createNote(testNote('only', '# Only'));
 
       final results = await repo.searchNotes('nonexistent');
 
@@ -221,9 +208,7 @@ void main() {
 
   group('extractLinks', () {
     test('extracts [[wiki-links]] from content', () async {
-      final created = await repo.createNote(
-        _testNote('linker', '# Note\n\nSee [[Target Page]] for details.'),
-      );
+      final created = await repo.createNote(testNote('linker', '# Note\n\nSee [[Target Page]] for details.'));
 
       await repo.extractLinks(created.id, created.content);
 
@@ -233,9 +218,7 @@ void main() {
     });
 
     test('handles content with no links', () async {
-      final created = await repo.createNote(
-        _testNote('plain', '# Note\n\nNo links here.'),
-      );
+      final created = await repo.createNote(testNote('plain', '# Note\n\nNo links here.'));
 
       await repo.extractLinks(created.id, created.content);
 
@@ -246,7 +229,7 @@ void main() {
 
   group('findNoteByTitle', () {
     test('finds note by case-insensitive path match', () async {
-      await repo.createNote(_testNote('TargetPage', '# Target Page Content'));
+      await repo.createNote(testNote('TargetPage', '# Target Page Content'));
 
       final found = await repo.findNoteByTitle('targetpage');
       expect(found, isNotNull);
@@ -261,9 +244,7 @@ void main() {
 
   group('getLinkCount', () {
     test('returns 0 when note has no links', () async {
-      final created = await repo.createNote(
-        _testNote('nolinks', '# No links here.'),
-      );
+      final created = await repo.createNote(testNote('nolinks', '# No links here.'));
 
       final count = await repo.getLinkCount(created.id);
       expect(count, equals(0));
@@ -272,12 +253,8 @@ void main() {
 
   group('getNotesWithLinks', () {
     test('returns only notes that have wiki-links', () async {
-      final linked = await repo.createNote(
-        _testNote('linked', '# Linked\n\nSee [[Another]].'),
-      );
-      await repo.createNote(
-        _testNote('plain', '# Plain\n\nNo links.'),
-      );
+      final linked = await repo.createNote(testNote('linked', '# Linked\n\nSee [[Another]].'));
+      await repo.createNote(testNote('plain', '# Plain\n\nNo links.'));
 
       await repo.extractLinks(linked.id, linked.content);
 
@@ -289,11 +266,9 @@ void main() {
 
   group('getNotesByTag', () {
     test('returns notes matching a tag', () async {
-      await repo.createNote(_testNote('work-note', '# Work', tags: ['work']));
-      await repo.createNote(
-          _testNote('personal-note', '# Personal', tags: ['personal']));
-      await repo.createNote(
-          _testNote('both-note', '# Both', tags: ['work', 'personal']));
+      await repo.createNote(testNote('work-note', '# Work', tags: ['work']));
+      await repo.createNote(testNote('personal-note', '# Personal', tags: ['personal']));
+      await repo.createNote(testNote('both-note', '# Both', tags: ['work', 'personal']));
 
       final results = await repo.getNotesByTag('work');
       expect(results.length, equals(2));
@@ -308,8 +283,8 @@ void main() {
 
   group('getAllTags', () {
     test('returns all unique tags with note counts', () async {
-      await repo.createNote(_testNote('a', '# A', tags: ['work', 'ideas']));
-      await repo.createNote(_testNote('b', '# B', tags: ['work']));
+      await repo.createNote(testNote('a', '# A', tags: ['work', 'ideas']));
+      await repo.createNote(testNote('b', '# B', tags: ['work']));
 
       final tags = await repo.getAllTags();
       expect(tags.length, equals(2));

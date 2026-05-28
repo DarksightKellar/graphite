@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphite/models/note.dart';
 import 'package:graphite/usecases/quick_note_use_case.dart';
 
 import '../helpers/fake_note_repository.dart';
@@ -16,11 +15,7 @@ void main() {
 
     group('fromText', () {
       test('creates note with title, content, and tags', () async {
-        final note = await useCase.fromText(
-          'My Note',
-          'Some content here',
-          tags: ['personal', 'journal'],
-        );
+        final note = await useCase.fromText('My Note', 'Some content here', tags: ['personal', 'journal']);
 
         expect(note.path, 'My Note');
         expect(note.content, '# My Note\n\nSome content here');
@@ -34,15 +29,12 @@ void main() {
         expect(reloaded.tags, ['personal', 'journal']);
       });
 
-      test(
-        'creates note with content-only heading when content is empty',
-        () async {
-          final note = await useCase.fromText('My Note', '', tags: ['draft']);
+      test('creates note with content-only heading when content is empty', () async {
+        final note = await useCase.fromText('My Note', '', tags: ['draft']);
 
-          expect(note.content, '# My Note');
-          expect(note.tags, ['draft']);
-        },
-      );
+        expect(note.content, '# My Note');
+        expect(note.tags, ['draft']);
+      });
 
       test('uses fallback title when title is empty', () async {
         final note = await useCase.fromText('', 'Some body');
@@ -82,10 +74,7 @@ void main() {
 
     group('importFile', () {
       test('creates note from imported file with metadata header', () async {
-        final note = await useCase.importFile(
-          '/vault/imports/meeting-notes.md',
-          '# Topics\n\n- Budget\n- Timeline',
-        );
+        final note = await useCase.importFile('/vault/imports/meeting-notes.md', '# Topics\n\n- Budget\n- Timeline');
 
         expect(note.path, 'Imported meeting-notes');
         expect(note.filePath, '/vault/imports/meeting-notes.md');
@@ -93,10 +82,7 @@ void main() {
 
         // Content should have metadata header
         expect(note.content, contains('# meeting-notes'));
-        expect(
-          note.content,
-          contains('> Imported from: /vault/imports/meeting-notes.md'),
-        );
+        expect(note.content, contains('> Imported from: /vault/imports/meeting-notes.md'));
         expect(note.content, contains('> Imported at:'));
         expect(note.content, contains('# Topics'));
         expect(note.content, contains('- Budget'));
@@ -109,10 +95,7 @@ void main() {
       });
 
       test('strips .md extension from display name', () async {
-        final note = await useCase.importFile(
-          '/path/to/My File.md',
-          'file content',
-        );
+        final note = await useCase.importFile('/path/to/My File.md', 'file content');
 
         expect(note.path, 'Imported My File');
         expect(note.content, contains('# My File'));
