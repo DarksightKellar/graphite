@@ -270,7 +270,13 @@ void main() {
       await pumpUntilSettled(tester);
 
       expect(find.byType(PreviewPane), findsOneWidget);
-      expect(find.textContaining('important'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(PreviewPane),
+          matching: find.textContaining('important'),
+        ),
+        findsOneWidget,
+      );
     });
   });
 }
