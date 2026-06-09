@@ -1,6 +1,6 @@
-import '../models/note.dart';
-import '../models/tag.dart';
-import '../repository/note_repository.dart';
+import 'package:graphite/core/models/note.dart';
+import 'package:graphite/core/models/tag.dart';
+import 'package:graphite/core/repository/note_repository.dart';
 
 /// Coordinates note listing, searching, and filtering for the HomeScreen.
 ///

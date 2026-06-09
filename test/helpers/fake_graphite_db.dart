@@ -1,6 +1,6 @@
-import 'package:graphite/data/database.dart';
-import 'package:graphite/models/note.dart';
-import 'package:graphite/models/tag.dart';
+import 'package:graphite/core/data/database.dart';
+import 'package:graphite/core/models/note.dart';
+import 'package:graphite/core/models/tag.dart';
 
 /// A fake database that stores notes and tags in memory for widget testing.
 /// Avoids sqflite_common_ffi native library issues on WSL.

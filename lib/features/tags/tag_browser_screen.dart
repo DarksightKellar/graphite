@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/tag.dart';
-import '../usecases/note_list_use_case.dart';
+import 'package:graphite/core/models/tag.dart';
+import 'package:graphite/features/home/usecases/note_list_use_case.dart';
 
 /// TagBrowserScreen — lists all tags with note counts, tappable to filter.
 class TagBrowserScreen extends StatefulWidget {

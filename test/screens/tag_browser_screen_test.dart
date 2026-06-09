@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphite/models/note.dart';
-import 'package:graphite/screens/tag_browser_screen.dart';
-import 'package:graphite/usecases/note_list_use_case.dart';
+import 'package:graphite/core/models/note.dart';
+import 'package:graphite/features/home/usecases/note_list_use_case.dart';
+import 'package:graphite/features/tags/tag_browser_screen.dart';
 import '../helpers/fake_note_repository.dart';
 
 void main() {

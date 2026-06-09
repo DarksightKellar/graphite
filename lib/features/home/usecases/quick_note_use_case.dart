@@ -1,5 +1,5 @@
-import '../models/note.dart';
-import '../repository/note_repository.dart';
+import 'package:graphite/core/models/note.dart';
+import 'package:graphite/core/repository/note_repository.dart';
 
 /// Creates notes from quick-capture text input or imported files.
 ///

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphite/models/note.dart';
-import 'package:graphite/usecases/delete_note_use_case.dart';
+import 'package:graphite/core/models/note.dart';
+import 'package:graphite/features/home/usecases/delete_note_use_case.dart';
 
 import '../helpers/fake_graphite_db.dart';
 import '../helpers/fake_note_repository.dart';

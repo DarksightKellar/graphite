@@ -3,17 +3,17 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphite/data/database.dart';
-import 'package:graphite/models/note.dart';
-import 'package:graphite/repository/note_repository.dart';
-import 'package:graphite/screens/editor_screen.dart';
-import 'package:graphite/screens/home_screen.dart';
-import 'package:graphite/usecases/delete_note_use_case.dart';
-import 'package:graphite/usecases/navigate_link_use_case.dart';
-import 'package:graphite/usecases/note_list_use_case.dart';
-import 'package:graphite/usecases/quick_note_use_case.dart';
-import 'package:graphite/usecases/save_note_use_case.dart';
-import 'package:graphite/widgets/editor_pane.dart';
+import 'package:graphite/core/data/database.dart';
+import 'package:graphite/core/models/note.dart';
+import 'package:graphite/core/repository/note_repository.dart';
+import 'package:graphite/features/editor/editor_screen.dart';
+import 'package:graphite/features/editor/usecases/navigate_link_use_case.dart';
+import 'package:graphite/features/editor/usecases/save_note_use_case.dart';
+import 'package:graphite/features/editor/widgets/editor_pane.dart';
+import 'package:graphite/features/home/home_screen.dart';
+import 'package:graphite/features/home/usecases/delete_note_use_case.dart';
+import 'package:graphite/features/home/usecases/note_list_use_case.dart';
+import 'package:graphite/features/home/usecases/quick_note_use_case.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'helpers/fake_note_repository.dart';

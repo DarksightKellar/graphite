@@ -1,5 +1,5 @@
-import 'package:graphite/models/note.dart';
-import 'package:graphite/repository/note_repository.dart';
+import 'package:graphite/core/models/note.dart';
+import 'package:graphite/core/repository/note_repository.dart';
 import 'fake_graphite_db.dart';
 
 /// A fake repository that wraps a [FakeGraphiteDB] for widget testing.

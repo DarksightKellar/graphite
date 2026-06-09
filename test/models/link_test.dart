@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphite/models/link.dart';
+import 'package:graphite/core/models/link.dart';
 
 void main() {
   final sampleJson = <String, dynamic>{'from_note_id': 'note-123', 'to_note_title': 'Project Alpha', 'weight': 3};

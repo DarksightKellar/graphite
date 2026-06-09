@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:graphite/data/database.dart';
-import 'package:graphite/models/note.dart';
+import 'package:graphite/core/data/database.dart';
+import 'package:graphite/core/models/note.dart';
 
 void main() {
   setUpAll(() {

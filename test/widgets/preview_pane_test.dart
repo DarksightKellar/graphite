@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:graphite/widgets/preview_pane.dart';
+import 'package:graphite/features/editor/widgets/preview_pane.dart';
 
 Widget wrap(Widget child) => MaterialApp(
       home: Scaffold(body: child),

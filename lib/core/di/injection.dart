@@ -1,12 +1,12 @@
 import 'package:get_it/get_it.dart';
 
-import '../data/database.dart';
-import '../repository/note_repository.dart';
-import '../usecases/delete_note_use_case.dart';
-import '../usecases/navigate_link_use_case.dart';
-import '../usecases/note_list_use_case.dart';
-import '../usecases/quick_note_use_case.dart';
-import '../usecases/save_note_use_case.dart';
+import 'package:graphite/core/data/database.dart';
+import 'package:graphite/core/repository/note_repository.dart';
+import 'package:graphite/features/editor/usecases/navigate_link_use_case.dart';
+import 'package:graphite/features/editor/usecases/save_note_use_case.dart';
+import 'package:graphite/features/home/usecases/delete_note_use_case.dart';
+import 'package:graphite/features/home/usecases/note_list_use_case.dart';
+import 'package:graphite/features/home/usecases/quick_note_use_case.dart';
 
 /// Application-wide service locator.
 final getIt = GetIt.instance;

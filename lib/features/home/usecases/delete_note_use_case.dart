@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import '../repository/note_repository.dart';
+import 'package:graphite/core/repository/note_repository.dart';
 
 /// Coordinates note deletion for the HomeScreen.
 ///

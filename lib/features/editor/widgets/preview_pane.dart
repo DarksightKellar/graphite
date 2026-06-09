@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 
-import '../design/components/tag_chip.dart';
-import '../design/components/wiki_link.dart';
+import 'package:graphite/core/design/components/tag_chip.dart';
+import 'package:graphite/core/design/components/wiki_link.dart';
 
 // ── Inline syntax definitions (flutter_markdown integration) ──────
 

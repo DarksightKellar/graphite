@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphite/usecases/quick_note_use_case.dart';
+import 'package:graphite/features/home/usecases/quick_note_use_case.dart';
 
 import '../helpers/fake_note_repository.dart';
 

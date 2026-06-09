@@ -1,5 +1,5 @@
-import '../models/note.dart';
-import '../repository/note_repository.dart';
+import 'package:graphite/core/models/note.dart';
+import 'package:graphite/core/repository/note_repository.dart';
 
 /// Finds an existing note by title or creates a new one.
 ///

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphite/widgets/quick_capture_dialog.dart';
+import 'package:graphite/features/home/widgets/quick_capture_dialog.dart';
 
 /// Tests for the QuickCaptureDialog bottom sheet widget.
 void main() {

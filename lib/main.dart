@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'design/theme.dart';
-import 'di/injection.dart';
-import 'router/app_router.dart';
+import 'package:graphite/core/design/theme.dart';
+import 'package:graphite/core/di/injection.dart';
+import 'package:graphite/core/router/app_router.dart';
 
 /// Main entry point for Graphite app.
 void main() {

@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../usecases/save_note_use_case.dart';
-import '../usecases/navigate_link_use_case.dart';
-import '../widgets/editor_pane.dart';
-import '../widgets/preview_pane.dart';
+import 'package:graphite/features/editor/usecases/navigate_link_use_case.dart';
+import 'package:graphite/features/editor/usecases/save_note_use_case.dart';
+import 'package:graphite/features/editor/widgets/editor_pane.dart';
+import 'package:graphite/features/editor/widgets/preview_pane.dart';
 
 /// Markdown editor screen with live preview and [[wiki-link]] navigation.
 ///

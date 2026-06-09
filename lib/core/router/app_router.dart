@@ -1,13 +1,13 @@
 import 'package:go_router/go_router.dart';
-import '../di/injection.dart';
-import '../screens/home_screen.dart';
-import '../screens/editor_screen.dart';
-import '../screens/tag_browser_screen.dart';
-import '../usecases/delete_note_use_case.dart';
-import '../usecases/navigate_link_use_case.dart';
-import '../usecases/note_list_use_case.dart';
-import '../usecases/quick_note_use_case.dart';
-import '../usecases/save_note_use_case.dart';
+import 'package:graphite/core/di/injection.dart';
+import 'package:graphite/features/editor/editor_screen.dart';
+import 'package:graphite/features/editor/usecases/navigate_link_use_case.dart';
+import 'package:graphite/features/editor/usecases/save_note_use_case.dart';
+import 'package:graphite/features/home/home_screen.dart';
+import 'package:graphite/features/home/usecases/delete_note_use_case.dart';
+import 'package:graphite/features/home/usecases/note_list_use_case.dart';
+import 'package:graphite/features/home/usecases/quick_note_use_case.dart';
+import 'package:graphite/features/tags/tag_browser_screen.dart';
 
 /// Router configuration for Graphite app.
 final appRouter = GoRouter(

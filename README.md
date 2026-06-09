@@ -49,14 +49,19 @@ A modern, local-first note-taking app built with Flutter. Clean architecture fro
 
 ```
 lib/
-├── main.dart                 # App entry point
-├── router/                   # Route definitions (app_router.dart)
-├── models/                   # Core data: Note, Tag, Link
-├── data/                     # Platform abstractions (database, file picker, file system)
-├── repository/               # Business logic (NoteRepository)
-├── utils/                    # Helpers (markdown_parser)
-├── widgets/                  # Reusable UI components (editor, preview, quick capture)
-└── screens/                  # Full-screen views (Home, Editor, Graph, Tag Browser)
+├── core/                     # Shared app layers
+│   ├── data/                 # Platform abstractions (database, file system)
+│   ├── design/               # Theme and shared UI primitives
+│   ├── di/                   # Dependency injection
+│   ├── models/               # Core data: Note, Tag, Link
+│   ├── repository/           # Business logic (NoteRepository)
+│   └── router/               # Route definitions (app_router.dart)
+├── features/                 # Feature modules
+│   ├── editor/               # Editor screen, widgets, and use cases
+│   ├── graph/                # Graph placeholder
+│   ├── home/                 # Home screen, widgets, and use cases
+│   └── tags/                 # Tag browser
+└── main.dart                 # App entry point
 ```
 
 ## Architecture Principles

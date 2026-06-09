@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:graphite/data/file_repository.dart';
+import 'package:graphite/core/data/file_repository.dart';
 
 /// Tests for FileRepository — async init pattern and directory traversal.
 void main() {

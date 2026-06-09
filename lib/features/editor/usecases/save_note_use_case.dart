@@ -1,5 +1,5 @@
-import '../models/note.dart';
-import '../repository/note_repository.dart';
+import 'package:graphite/core/models/note.dart';
+import 'package:graphite/core/repository/note_repository.dart';
 
 /// Extracts #hashtag patterns from content.
 final _tagPattern = RegExp(r'#[a-zA-Z0-9_-]+');
