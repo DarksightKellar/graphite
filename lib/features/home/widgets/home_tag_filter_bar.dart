@@ -43,7 +43,7 @@ class HomeTagFilterBar extends StatelessWidget {
           }
 
           final tag = tags[index - 1];
-          final label = '#${tag.id}';
+          final label = tag.id.startsWith('#') ? tag.id : '#${tag.id}';
           final selected = selectedTag == tag.id;
 
           return GraphiteFilterChip(

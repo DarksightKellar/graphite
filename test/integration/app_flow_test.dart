@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:graphite/core/di/injection.dart';
 import 'package:graphite/core/models/note.dart';
+import 'package:graphite/core/theme/app_theme_service.dart';
 import 'package:graphite/features/editor/editor_screen.dart';
 import 'package:graphite/features/editor/usecases/navigate_link_use_case.dart';
 import 'package:graphite/features/editor/usecases/save_note_use_case.dart';
@@ -11,6 +13,7 @@ import 'package:graphite/features/home/home_screen.dart';
 import 'package:graphite/features/home/usecases/delete_note_use_case.dart';
 import 'package:graphite/features/home/usecases/note_list_use_case.dart';
 import 'package:graphite/features/home/usecases/quick_note_use_case.dart';
+import 'package:graphite/features/home/widgets/home_tag_filter_bar.dart';
 import 'package:graphite/features/tags/tag_browser_screen.dart';
 import '../helpers/fake_note_repository.dart';
 
@@ -26,6 +29,11 @@ void main() {
   GoRouter? router0;
 
   setUp(() {
+    if (getIt.isRegistered<AppThemeService>()) {
+      getIt.unregister<AppThemeService>();
+    }
+    getIt.registerSingleton<AppThemeService>(AppThemeService());
+
     fakeRepo = FakeNoteRepository();
     noteListUseCase = NoteListUseCase(fakeRepo);
     quickNoteUseCase = QuickNoteUseCase(fakeRepo);
@@ -47,7 +55,8 @@ void main() {
         ),
         GoRoute(
           path: '/tags',
-          builder: (_, __) => TagBrowserScreen(noteListUseCase: noteListUseCase),
+          builder: (_, __) =>
+              TagBrowserScreen(noteListUseCase: noteListUseCase),
         ),
         GoRoute(
           path: '/editor/:id',
@@ -74,7 +83,11 @@ void main() {
     await t.pump(const Duration(milliseconds: 100));
   }
 
-  Future<Note> mkNote({required String path, required String content, List<String> tags = const []}) async {
+  Future<Note> mkNote({
+    required String path,
+    required String content,
+    List<String> tags = const [],
+  }) async {
     final n = Note(
       id: '',
       path: path,
@@ -91,14 +104,19 @@ void main() {
   // Flow 1: First launch → first note
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 1: quick capture → note in list → tap opens editor', (tester) async {
+  testWidgets('Flow 1: quick capture → note in list → tap opens editor', (
+    tester,
+  ) async {
     addTearDown(() => dismissTimers(tester));
 
     await tester.pumpWidget(buildApp());
     await settle(tester);
 
     // Empty state
-    expect(find.text('No notes yet. Tap + to create your first note.'), findsOneWidget);
+    expect(
+      find.text('No notes yet. Tap + to create your first note.'),
+      findsOneWidget,
+    );
 
     // Tap FAB
     await tester.tap(find.byType(FloatingActionButton));
@@ -135,7 +153,10 @@ void main() {
   testWidgets('Flow 2: edit and auto-save persist via DB only', (tester) async {
     addTearDown(() => dismissTimers(tester));
 
-    final note = await mkNote(path: 'Edit Test', content: '# Edit Test\n\nOriginal content.');
+    final note = await mkNote(
+      path: 'Edit Test',
+      content: '# Edit Test\n\nOriginal content.',
+    );
 
     await tester.pumpWidget(buildApp());
     await settle(tester);
@@ -149,7 +170,10 @@ void main() {
 
     // Edit content using descendant finder (the TextField is inside EditorPane)
     final editorPane = find.byType(EditorPane);
-    final textField = find.descendant(of: editorPane, matching: find.byType(TextField));
+    final textField = find.descendant(
+      of: editorPane,
+      matching: find.byType(TextField),
+    );
     await tester.enterText(textField, '# Edit Test\n\nUpdated content.');
     await tester.pump();
 
@@ -165,7 +189,9 @@ void main() {
   // Flow 3: Search
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 3: search filters notes, clear restores all', (tester) async {
+  testWidgets('Flow 3: search filters notes, clear restores all', (
+    tester,
+  ) async {
     addTearDown(() => dismissTimers(tester));
 
     await mkNote(path: 'Alpha', content: '# Alpha\n\nLighthouse keeper logs.');
@@ -202,7 +228,9 @@ void main() {
   // Flow 4: Tag
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 4: tagged note → browse tags → tap tag filters', (tester) async {
+  testWidgets('Flow 4: tagged note → browse tags → tap tag filters', (
+    tester,
+  ) async {
     addTearDown(() => dismissTimers(tester));
 
     await mkNote(
@@ -210,7 +238,11 @@ void main() {
       content: '# Tagged Note\n\nThis one has an #important tag.',
       tags: ['#important'],
     );
-    await mkNote(path: 'Plain Note', content: '# Plain Note\n\nJust a regular note.', tags: []);
+    await mkNote(
+      path: 'Plain Note',
+      content: '# Plain Note\n\nJust a regular note.',
+      tags: [],
+    );
 
     await tester.pumpWidget(buildApp());
     await settle(tester);
@@ -218,23 +250,13 @@ void main() {
     expect(find.text('Tagged Note'), findsOneWidget);
     expect(find.text('Plain Note'), findsOneWidget);
 
-    // Browse Tags: open 3-dot menu then tap "Browse Tags"
-    // The third PopupMenuButton in the AppBar actions is the quick-actions menu
-    final popupMenus = find.byType(PopupMenuButton<String>);
-    await tester.tap(popupMenus);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    // "Browse Tags" should appear in the overlay
-    expect(find.text('Browse Tags'), findsOneWidget);
-    await tester.tap(find.text('Browse Tags'));
-    await settle(tester);
-
-    // Tag browser
-    expect(find.text('Tags'), findsOneWidget);
-    expect(find.text('1 note'), findsOneWidget);
-
-    // Tap #important tag row → pops back with tag
-    await tester.tap(find.text('#important').last);
+    // Tap the tag filter chip.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(HomeTagFilterBar),
+        matching: find.text('#important'),
+      ),
+    );
     await settle(tester);
 
     // Home screen should show filter banner from filterByTag()
@@ -247,10 +269,15 @@ void main() {
   // Flow 5: Wiki-link
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 5: wiki-link tap prompts create, link navigates', (tester) async {
+  testWidgets('Flow 5: wiki-link tap prompts create, link navigates', (
+    tester,
+  ) async {
     addTearDown(() => dismissTimers(tester));
 
-    final noteA = await mkNote(path: 'Note A', content: '# Note A\n\nSee [[Note B]] for more details.');
+    final noteA = await mkNote(
+      path: 'Note A',
+      content: '# Note A\n\nSee [[Note B]] for more details.',
+    );
     await fakeRepo.extractLinks(noteA.id, noteA.content);
 
     await tester.pumpWidget(buildApp());
@@ -261,7 +288,9 @@ void main() {
     await settle(tester);
     expect(find.text('Edit Note'), findsOneWidget);
 
-    // Tap [[Note B]] link in preview
+    // Open Reading view and tap [[Note B]].
+    await tester.tap(find.byTooltip('Reading view'));
+    await settle(tester);
     expect(find.text('Note B'), findsWidgets);
     await tester.tap(find.text('Note B').last);
     await settle(tester);
@@ -281,10 +310,15 @@ void main() {
   // Flow 6: Delete
   // ═════════════════════════════════════════════════════════════════════
 
-  testWidgets('Flow 6: long-press delete, confirm, note removed', (tester) async {
+  testWidgets('Flow 6: long-press delete, confirm, note removed', (
+    tester,
+  ) async {
     addTearDown(() => dismissTimers(tester));
 
-    await mkNote(path: 'Delete Me', content: '# Delete Me\n\nThis note will be deleted.');
+    await mkNote(
+      path: 'Delete Me',
+      content: '# Delete Me\n\nThis note will be deleted.',
+    );
 
     await tester.pumpWidget(buildApp());
     await settle(tester);

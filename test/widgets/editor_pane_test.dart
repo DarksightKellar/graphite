@@ -6,9 +6,9 @@ void main() {
   group('EditorPane', () {
     testWidgets('accepts a TextEditingController', (tester) async {
       final controller = TextEditingController(text: '# Hello\n\nWorld');
-      await tester.pumpWidget(_wrapWithMaterialApp(
-        EditorPane(controller: controller),
-      ));
+      await tester.pumpWidget(
+        _wrapWithMaterialApp(EditorPane(controller: controller)),
+      );
 
       expect(find.byType(TextField), findsOneWidget);
       expect(controller.text, equals('# Hello\n\nWorld'));
@@ -16,9 +16,9 @@ void main() {
 
     testWidgets('uses monospace font for editor text', (tester) async {
       final controller = TextEditingController(text: 'code');
-      await tester.pumpWidget(_wrapWithMaterialApp(
-        EditorPane(controller: controller),
-      ));
+      await tester.pumpWidget(
+        _wrapWithMaterialApp(EditorPane(controller: controller)),
+      );
 
       final textField = tester.widget<TextField>(find.byType(TextField));
       final style = textField.style;
@@ -29,24 +29,96 @@ void main() {
     testWidgets('calls onChanged when text is modified', (tester) async {
       String? changedText;
       final controller = TextEditingController(text: 'initial');
-      await tester.pumpWidget(_wrapWithMaterialApp(
-        EditorPane(
-          controller: controller,
-          onChanged: (text) => changedText = text,
+      await tester.pumpWidget(
+        _wrapWithMaterialApp(
+          EditorPane(
+            controller: controller,
+            onChanged: (text) => changedText = text,
+          ),
         ),
-      ));
+      );
 
       await tester.enterText(find.byType(TextField), 'updated');
       expect(changedText, equals('updated'));
+    });
+
+    testWidgets('inline markdown controller preserves markdown text', (
+      tester,
+    ) async {
+      final controller = InlineMarkdownEditingController(
+        text: '# Title\n\nA **bold** [[Link]] with #tag',
+      );
+      await tester.pumpWidget(
+        _wrapWithMaterialApp(EditorPane(controller: controller)),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      final span = controller.buildTextSpan(
+        context: tester.element(find.byType(TextField)),
+        style: textField.style,
+        withComposing: false,
+      );
+
+      expect(span.toPlainText(), equals(controller.text));
+      expect(span.toPlainText(), contains('[[Link]]'));
+      expect(span.toPlainText(), contains('#tag'));
+    });
+
+    testWidgets('inline markdown controller styles wiki links and tags', (
+      tester,
+    ) async {
+      final controller = InlineMarkdownEditingController(
+        text: 'See [[Roadmap]] and #planning',
+      );
+      await tester.pumpWidget(
+        _wrapWithMaterialApp(EditorPane(controller: controller)),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      final span = controller.buildTextSpan(
+        context: tester.element(find.byType(TextField)),
+        style: textField.style,
+        withComposing: false,
+      );
+      final childSpans = span.children!.whereType<TextSpan>().toList();
+
+      final link = childSpans.firstWhere((child) => child.text == 'Roadmap');
+      final tag = childSpans.firstWhere((child) => child.text == '#planning');
+
+      expect(link.style!.decoration, TextDecoration.underline);
+      expect(tag.style!.fontWeight, FontWeight.w600);
+    });
+
+    testWidgets('inline markdown controller can render raw source mode', (
+      tester,
+    ) async {
+      final controller = InlineMarkdownEditingController(
+        text: 'See [[Roadmap]] and #planning',
+      )..livePreview = false;
+      await tester.pumpWidget(
+        _wrapWithMaterialApp(EditorPane(controller: controller)),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      final span = controller.buildTextSpan(
+        context: tester.element(find.byType(TextField)),
+        style: textField.style,
+        withComposing: false,
+      );
+
+      expect(span.text, equals(controller.text));
+      expect(span.children, isNull);
     });
 
     testWidgets('hides line-number column when showLineNumbers is false', (
       tester,
     ) async {
       final controller = TextEditingController(text: 'line');
-      await tester.pumpWidget(_wrapWithMaterialApp(
-        EditorPane(controller: controller, showLineNumbers: false),
-      ));
+      await tester.pumpWidget(
+        _wrapWithMaterialApp(
+          EditorPane(controller: controller, showLineNumbers: false),
+        ),
+      );
 
       expect(find.text('1 lines'), findsNothing);
     });
@@ -54,9 +126,11 @@ void main() {
     group('Formatting toolbar', () {
       testWidgets('renders formatting buttons', (tester) async {
         final controller = TextEditingController();
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller, showLineNumbers: true),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
 
         expect(find.byIcon(Icons.format_bold), findsOneWidget);
         expect(find.byIcon(Icons.format_italic), findsOneWidget);
@@ -67,9 +141,11 @@ void main() {
 
       testWidgets('bold button inserts ** markup at cursor', (tester) async {
         final controller = TextEditingController(text: 'hello');
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller, showLineNumbers: true),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
 
         final textField = find.byType(TextField);
         await tester.tap(textField);
@@ -83,9 +159,11 @@ void main() {
 
       testWidgets('italic button inserts * markup at cursor', (tester) async {
         final controller = TextEditingController(text: 'hello');
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller, showLineNumbers: true),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
 
         final textField = find.byType(TextField);
         await tester.tap(textField);
@@ -99,9 +177,11 @@ void main() {
 
       testWidgets('heading button inserts # markup at cursor', (tester) async {
         final controller = TextEditingController(text: 'hello');
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller, showLineNumbers: true),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
 
         final textField = find.byType(TextField);
         await tester.tap(textField);
@@ -115,9 +195,11 @@ void main() {
 
       testWidgets('list button inserts - markup at cursor', (tester) async {
         final controller = TextEditingController(text: 'hello');
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller, showLineNumbers: true),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
 
         final textField = find.byType(TextField);
         await tester.tap(textField);
@@ -131,9 +213,11 @@ void main() {
 
       testWidgets('link button inserts [[]] markup at cursor', (tester) async {
         final controller = TextEditingController(text: 'hello');
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller, showLineNumbers: true),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
 
         final textField = find.byType(TextField);
         await tester.tap(textField);
@@ -150,9 +234,11 @@ void main() {
         tester,
       ) async {
         final controller = TextEditingController(text: 'hello world');
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller, showLineNumbers: true),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
 
         controller.selection = const TextSelection(
           baseOffset: 0,
@@ -172,21 +258,23 @@ void main() {
         tester,
       ) async {
         final controller = TextEditingController();
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller, showLineNumbers: true),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
 
         expect(find.byIcon(Icons.undo), findsOneWidget);
         expect(find.byIcon(Icons.redo), findsOneWidget);
       });
 
-      testWidgets('undo reverts toolbar formatting action', (
-        tester,
-      ) async {
+      testWidgets('undo reverts toolbar formatting action', (tester) async {
         final controller = TextEditingController(text: 'original');
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller, showLineNumbers: true),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
 
         await tester.tap(find.byType(TextField));
         await tester.pump();
@@ -202,13 +290,13 @@ void main() {
         expect(controller.text, equals('original'));
       });
 
-      testWidgets('redo restores undone formatting action', (
-        tester,
-      ) async {
+      testWidgets('redo restores undone formatting action', (tester) async {
         final controller = TextEditingController(text: 'hello');
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller, showLineNumbers: true),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
 
         await tester.tap(find.byType(TextField));
         await tester.pump();
@@ -230,9 +318,11 @@ void main() {
     group('Footer counts', () {
       testWidgets('shows word and character count', (tester) async {
         final controller = TextEditingController(text: 'one two three');
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller, showLineNumbers: true),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
 
         await tester.pump();
         expect(find.textContaining('3 words'), findsOneWidget);
@@ -246,9 +336,9 @@ void main() {
         tester,
       ) async {
         final controller = TextEditingController();
-        await tester.pumpWidget(_wrapWithMaterialApp(
-          EditorPane(controller: controller),
-        ));
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(EditorPane(controller: controller)),
+        );
 
         final textField = tester.widget<TextField>(find.byType(TextField));
         expect(textField.maxLines, isNull);
@@ -259,7 +349,5 @@ void main() {
 }
 
 Widget _wrapWithMaterialApp(Widget child) {
-  return MaterialApp(
-    home: Scaffold(body: child),
-  );
+  return MaterialApp(home: Scaffold(body: child));
 }

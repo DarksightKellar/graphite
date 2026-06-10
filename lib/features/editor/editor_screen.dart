@@ -6,12 +6,15 @@ import 'package:graphite/features/editor/usecases/save_note_use_case.dart';
 import 'package:graphite/features/editor/widgets/editor_pane.dart';
 import 'package:graphite/features/editor/widgets/preview_pane.dart';
 
-/// Markdown editor screen with live preview and [[wiki-link]] navigation.
+enum _EditorViewMode { livePreview, source, reading }
+
+/// Markdown editor screen with inline live-preview styling and [[wiki-link]]
+/// navigation.
 ///
 /// Features:
 /// - Loads note content from GraphiteDB
-/// - Two-pane layout: editor (left) + live preview (right)
-/// - [[wiki-link]] rendering as tappable widgets in preview
+/// - Single-pane inline markdown editor by default
+/// - Source and Reading view modes on every screen size
 /// - Tap [[link]]: navigate to note or offer to create
 /// - Auto-save on pause (debounced, 2s after last keystroke)
 /// - Save on app backgrounding (AppLifecycleState.paused)
@@ -37,7 +40,8 @@ class EditorScreen extends StatefulWidget {
 
 class _EditorScreenState extends State<EditorScreen>
     with WidgetsBindingObserver {
-  final TextEditingController _controller = TextEditingController();
+  final InlineMarkdownEditingController _controller =
+      InlineMarkdownEditingController();
   late final SaveNoteUseCase _saveNoteUseCase;
   late final NavigateLinkUseCase _navigateLinkUseCase;
 
@@ -47,6 +51,7 @@ class _EditorScreenState extends State<EditorScreen>
   String? _loadError;
   bool _isSaving = false;
   bool _showSaved = false;
+  _EditorViewMode _viewMode = _EditorViewMode.livePreview;
   Timer? _savedIndicatorTimer;
 
   bool get _hasUnsavedChanges => _controller.text != _savedContent;
@@ -222,6 +227,21 @@ class _EditorScreenState extends State<EditorScreen>
     return result ?? false;
   }
 
+  void _setViewMode(_EditorViewMode mode) {
+    setState(() {
+      _viewMode = mode;
+      _controller.livePreview = mode == _EditorViewMode.livePreview;
+    });
+  }
+
+  void _toggleSourceMode() {
+    _setViewMode(
+      _viewMode == _EditorViewMode.source
+          ? _EditorViewMode.livePreview
+          : _EditorViewMode.source,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -239,6 +259,30 @@ class _EditorScreenState extends State<EditorScreen>
         appBar: AppBar(
           title: const Text('Edit Note'),
           actions: [
+            if (_viewMode == _EditorViewMode.reading)
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Edit',
+                onPressed: () => _setViewMode(_EditorViewMode.livePreview),
+              )
+            else ...[
+              IconButton(
+                icon: Icon(
+                  _viewMode == _EditorViewMode.source
+                      ? Icons.visibility_outlined
+                      : Icons.code_outlined,
+                ),
+                tooltip: _viewMode == _EditorViewMode.source
+                    ? 'Live preview'
+                    : 'Source mode',
+                onPressed: _toggleSourceMode,
+              ),
+              IconButton(
+                icon: const Icon(Icons.rounded_corner),
+                tooltip: 'Reading view',
+                onPressed: () => _setViewMode(_EditorViewMode.reading),
+              ),
+            ],
             if (_showSaved)
               Padding(
                 padding: const EdgeInsets.only(right: 16),
@@ -293,28 +337,22 @@ class _EditorScreenState extends State<EditorScreen>
                     _handleSwipeBack();
                   }
                 },
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: EditorPane(
-                        controller: _controller,
-                        onChanged: _onTextChanged,
-                        showLineNumbers: true,
-                      ),
-                    ),
-                    const VerticalDivider(thickness: 1, width: 1),
-                    Expanded(
-                      flex: 2,
-                      child: PreviewPane(
-                        content: _controller.text,
-                        onLinkTap: _onLinkTap,
-                      ),
-                    ),
-                  ],
-                ),
+                child: _buildBodyForMode(),
               ),
       ),
+    );
+  }
+
+  Widget _buildBodyForMode() {
+    if (_viewMode == _EditorViewMode.reading) {
+      return PreviewPane(content: _controller.text, onLinkTap: _onLinkTap);
+    }
+
+    return EditorPane(
+      controller: _controller,
+      onChanged: _onTextChanged,
+      onWikiLinkTap: _onLinkTap,
+      showLineNumbers: true,
     );
   }
 }

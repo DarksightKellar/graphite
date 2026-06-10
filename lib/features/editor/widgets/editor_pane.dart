@@ -1,19 +1,216 @@
 import 'package:flutter/material.dart';
 
+import 'package:graphite/core/design/colors.dart';
 import 'package:graphite/core/design/spacing.dart';
 import 'package:graphite/core/design/typography.dart';
+
+/// A markdown controller that keeps raw markdown text editable while painting
+/// common markdown syntax with live-preview styling.
+class InlineMarkdownEditingController extends TextEditingController {
+  InlineMarkdownEditingController({super.text});
+
+  bool _livePreview = true;
+
+  bool get livePreview => _livePreview;
+
+  set livePreview(bool value) {
+    if (_livePreview == value) return;
+    _livePreview = value;
+    notifyListeners();
+  }
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    if (!_livePreview) {
+      return super.buildTextSpan(
+        context: context,
+        style: style,
+        withComposing: withComposing,
+      );
+    }
+
+    final colorScheme = Theme.of(context).colorScheme;
+    final baseStyle = style ?? GraphiteTypography.mono;
+    final tokenStyle = baseStyle.copyWith(
+      color: colorScheme.onSurface.withValues(alpha: 0.45),
+    );
+    final strongStyle = baseStyle.copyWith(
+      color: colorScheme.onSurface,
+      fontWeight: FontWeight.w700,
+    );
+    final emphasisStyle = baseStyle.copyWith(
+      color: colorScheme.onSurface,
+      fontStyle: FontStyle.italic,
+    );
+    final headingStyle = baseStyle.copyWith(
+      color: colorScheme.onSurface,
+      fontWeight: FontWeight.w700,
+    );
+    final listMarkerStyle = baseStyle.copyWith(
+      color: colorScheme.primary,
+      fontWeight: FontWeight.w700,
+    );
+    final linkStyle = baseStyle.copyWith(
+      color: colorScheme.primary,
+      fontWeight: FontWeight.w600,
+      decoration: TextDecoration.underline,
+      decorationColor: colorScheme.primary.withValues(alpha: 0.55),
+    );
+    final tagStyle = baseStyle.copyWith(
+      color: GraphiteColors.moss,
+      fontWeight: FontWeight.w600,
+    );
+
+    final children = <InlineSpan>[];
+    final source = text;
+    final lines = source.split('\n');
+
+    for (var i = 0; i < lines.length; i++) {
+      if (i > 0) {
+        children.add(TextSpan(text: '\n', style: baseStyle));
+      }
+      _appendDecoratedLine(
+        children,
+        lines[i],
+        baseStyle,
+        tokenStyle,
+        strongStyle,
+        emphasisStyle,
+        headingStyle,
+        listMarkerStyle,
+        linkStyle,
+        tagStyle,
+      );
+    }
+
+    return TextSpan(style: baseStyle, children: children);
+  }
+
+  static void _appendDecoratedLine(
+    List<InlineSpan> children,
+    String line,
+    TextStyle baseStyle,
+    TextStyle tokenStyle,
+    TextStyle strongStyle,
+    TextStyle emphasisStyle,
+    TextStyle headingStyle,
+    TextStyle listMarkerStyle,
+    TextStyle linkStyle,
+    TextStyle tagStyle,
+  ) {
+    if (line.isEmpty) return;
+
+    final headingMatch = RegExp(r'^(#{1,6})(\s+)').firstMatch(line);
+    var start = 0;
+    TextStyle lineBaseStyle = baseStyle;
+
+    if (headingMatch != null) {
+      children.add(TextSpan(text: headingMatch[1], style: tokenStyle));
+      children.add(TextSpan(text: headingMatch[2], style: baseStyle));
+      start = headingMatch.end;
+      lineBaseStyle = headingStyle;
+    } else {
+      final listMatch = RegExp(r'^(\s*)([-*+]|\d+\.)(\s+)').firstMatch(line);
+      if (listMatch != null) {
+        children.add(TextSpan(text: listMatch[1], style: baseStyle));
+        children.add(TextSpan(text: listMatch[2], style: listMarkerStyle));
+        children.add(TextSpan(text: listMatch[3], style: baseStyle));
+        start = listMatch.end;
+      }
+    }
+
+    _appendInlineSpans(
+      children,
+      line.substring(start),
+      lineBaseStyle,
+      tokenStyle,
+      strongStyle,
+      emphasisStyle,
+      linkStyle,
+      tagStyle,
+    );
+  }
+
+  static void _appendInlineSpans(
+    List<InlineSpan> children,
+    String text,
+    TextStyle baseStyle,
+    TextStyle tokenStyle,
+    TextStyle strongStyle,
+    TextStyle emphasisStyle,
+    TextStyle linkStyle,
+    TextStyle tagStyle,
+  ) {
+    final pattern = RegExp(
+      r'(\[\[[^\]\n]+\]\])|(\*\*[^*\n]+?\*\*)|(?<!\*)\*[^*\n]+?\*(?!\*)|(?<!\w)#[a-zA-Z0-9_-]+',
+    );
+    var cursor = 0;
+
+    for (final match in pattern.allMatches(text)) {
+      if (match.start > cursor) {
+        children.add(
+          TextSpan(text: text.substring(cursor, match.start), style: baseStyle),
+        );
+      }
+
+      final token = match[0]!;
+      if (token.startsWith('[[')) {
+        children.add(TextSpan(text: '[[', style: tokenStyle));
+        children.add(
+          TextSpan(
+            text: token.substring(2, token.length - 2),
+            style: linkStyle,
+          ),
+        );
+        children.add(TextSpan(text: ']]', style: tokenStyle));
+      } else if (token.startsWith('**')) {
+        children.add(TextSpan(text: '**', style: tokenStyle));
+        children.add(
+          TextSpan(
+            text: token.substring(2, token.length - 2),
+            style: strongStyle,
+          ),
+        );
+        children.add(TextSpan(text: '**', style: tokenStyle));
+      } else if (token.startsWith('*')) {
+        children.add(TextSpan(text: '*', style: tokenStyle));
+        children.add(
+          TextSpan(
+            text: token.substring(1, token.length - 1),
+            style: emphasisStyle,
+          ),
+        );
+        children.add(TextSpan(text: '*', style: tokenStyle));
+      } else {
+        children.add(TextSpan(text: token, style: tagStyle));
+      }
+
+      cursor = match.end;
+    }
+
+    if (cursor < text.length) {
+      children.add(TextSpan(text: text.substring(cursor), style: baseStyle));
+    }
+  }
+}
 
 /// A clean, distraction-free markdown editor pane.
 /// Accepts a TextEditingController to bind content.
 class EditorPane extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onWikiLinkTap;
   final bool showLineNumbers;
 
   const EditorPane({
     super.key,
     required this.controller,
     this.onChanged,
+    this.onWikiLinkTap,
     this.showLineNumbers = true,
   });
 
@@ -23,12 +220,15 @@ class EditorPane extends StatefulWidget {
 
 class _EditorPaneState extends State<EditorPane> {
   final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
   final List<String> _undoStack = [];
   final List<String> _redoStack = [];
+  bool _wasFocusedOnTapDown = false;
 
   @override
   void dispose() {
     _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -145,29 +345,84 @@ class _EditorPaneState extends State<EditorPane> {
         children: [
           if (widget.showLineNumbers) _buildFormattingToolbar(context),
           Expanded(
-            child: TextField(
-              controller: widget.controller,
-              focusNode: _focusNode,
-              onChanged: widget.onChanged,
-              style: GraphiteTypography.mono.copyWith(
-                color: colorScheme.onSurface,
-              ),
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: GraphiteSpacing.xl,
-                  vertical: GraphiteSpacing.xl,
-                ),
-              ),
-              maxLines: null,
-              keyboardType: TextInputType.multiline,
-              textInputAction: TextInputAction.newline,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTapDown: (_) {
+                    _wasFocusedOnTapDown = _focusNode.hasFocus;
+                  },
+                  onTapUp: (details) {
+                    if (!_wasFocusedOnTapDown) {
+                      _openWikiLinkAt(details.localPosition, constraints);
+                    }
+                  },
+                  child: TextField(
+                    controller: widget.controller,
+                    focusNode: _focusNode,
+                    scrollController: _scrollController,
+                    onChanged: widget.onChanged,
+                    style: GraphiteTypography.mono.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: GraphiteSpacing.xl,
+                        vertical: GraphiteSpacing.xl,
+                      ),
+                    ),
+                    maxLines: null,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
+                  ),
+                );
+              },
             ),
           ),
           if (widget.showLineNumbers) _buildFooter(context),
         ],
       ),
     );
+  }
+
+  void _openWikiLinkAt(Offset localPosition, BoxConstraints constraints) {
+    final onWikiLinkTap = widget.onWikiLinkTap;
+    if (onWikiLinkTap == null) return;
+
+    final text = widget.controller.text;
+    if (text.isEmpty) return;
+
+    final colorScheme = Theme.of(context).colorScheme;
+    final textStyle = GraphiteTypography.mono.copyWith(
+      color: colorScheme.onSurface,
+    );
+    final textSpan = widget.controller.buildTextSpan(
+      context: context,
+      style: textStyle,
+      withComposing: false,
+    );
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: constraints.maxWidth - GraphiteSpacing.xl * 2);
+
+    final textOffset = Offset(
+      localPosition.dx - GraphiteSpacing.xl,
+      localPosition.dy - GraphiteSpacing.xl + _scrollController.offset,
+    );
+    final position = textPainter.getPositionForOffset(textOffset).offset;
+    final linkMatch = RegExp(r'\[\[([^\]\n]+)\]\]')
+        .allMatches(text)
+        .where((match) => position >= match.start && position <= match.end);
+
+    if (linkMatch.isEmpty) return;
+    final title = linkMatch.first[1]?.trim();
+    if (title == null || title.isEmpty) return;
+
+    FocusScope.of(context).unfocus();
+    onWikiLinkTap(title);
   }
 
   Widget _buildFormattingToolbar(BuildContext context) {

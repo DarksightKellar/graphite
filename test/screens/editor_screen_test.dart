@@ -31,7 +31,9 @@ void main() {
       filePath: '$path.md',
       createdAt: DateTime(2025, 6, 1),
       updatedAt: DateTime(2025, 6, 1),
-      content: content.isNotEmpty ? content : '# $path\n\nSome **markdown** content with #tag1 and [[OtherPage]].',
+      content: content.isNotEmpty
+          ? content
+          : '# $path\n\nSome **markdown** content with #tag1 and [[OtherPage]].',
       tags: const ['tag1'],
     );
     final id = path.hashCode.toString();
@@ -67,14 +69,25 @@ void main() {
       final noteId = createNote();
 
       await tester.pumpWidget(
-        wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)),
+        wrap(
+          EditorScreen(
+            noteId: noteId,
+            saveNoteUseCase: saveNoteUseCase,
+            navigateLinkUseCase: navigateLinkUseCase,
+          ),
+        ),
       );
       await pumpUntilSettled(tester);
 
       expect(find.byType(EditorPane), findsOneWidget);
-      expect(find.byType(PreviewPane), findsOneWidget);
-      // PreviewPane uses RichText; check content via RichText text
-      expect(findRichTextContaining('Test Note'), findsOneWidget);
+      expect(find.byType(PreviewPane), findsNothing);
+      final textField = tester.widget<TextField>(
+        find.descendant(
+          of: find.byType(EditorPane),
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(textField.controller!.text, contains('Test Note'));
     });
 
     testWidgets('renders empty for new note (non-existent id)', (tester) async {
@@ -90,8 +103,107 @@ void main() {
       await pumpUntilSettled(tester);
 
       expect(find.byType(EditorPane), findsOneWidget);
-      expect(find.byType(PreviewPane), findsOneWidget);
+      expect(find.byType(PreviewPane), findsNothing);
       expect(find.byType(Scaffold), findsOneWidget);
+    });
+
+    testWidgets(
+      'reading view is full-surface and preserves edits on narrow layouts',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final noteId = createNote();
+
+        await tester.pumpWidget(
+          wrap(
+            EditorScreen(
+              noteId: noteId,
+              saveNoteUseCase: saveNoteUseCase,
+              navigateLinkUseCase: navigateLinkUseCase,
+            ),
+          ),
+        );
+        await pumpUntilSettled(tester);
+
+        expect(find.byType(EditorPane), findsOneWidget);
+        expect(find.byType(PreviewPane), findsNothing);
+
+        final textField = find.descendant(
+          of: find.byType(EditorPane),
+          matching: find.byType(TextField),
+        );
+        await tester.enterText(textField, '# Draft\n\nEdited before preview.');
+        await tester.pump();
+
+        await tester.tap(find.byTooltip('Reading view'));
+        await tester.pump();
+
+        expect(find.byType(EditorPane), findsNothing);
+        expect(find.byType(PreviewPane), findsOneWidget);
+        expect(findRichTextContaining('Edited before preview'), findsOneWidget);
+
+        await tester.tap(find.byTooltip('Edit'));
+        await tester.pump();
+
+        expect(find.byType(EditorPane), findsOneWidget);
+        expect(find.byType(PreviewPane), findsNothing);
+        expect(
+          tester
+              .widget<TextField>(
+                find.descendant(
+                  of: find.byType(EditorPane),
+                  matching: find.byType(TextField),
+                ),
+              )
+              .controller!
+              .text,
+          contains('Edited before preview'),
+        );
+      },
+    );
+
+    testWidgets('source mode switches to raw markdown editing', (tester) async {
+      final noteId = createNote();
+
+      await tester.pumpWidget(
+        wrap(
+          EditorScreen(
+            noteId: noteId,
+            saveNoteUseCase: saveNoteUseCase,
+            navigateLinkUseCase: navigateLinkUseCase,
+          ),
+        ),
+      );
+      await pumpUntilSettled(tester);
+
+      var textField = tester.widget<TextField>(
+        find.descendant(
+          of: find.byType(EditorPane),
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(
+        (textField.controller! as InlineMarkdownEditingController).livePreview,
+        isTrue,
+      );
+
+      await tester.tap(find.byTooltip('Source mode'));
+      await tester.pump();
+
+      textField = tester.widget<TextField>(
+        find.descendant(
+          of: find.byType(EditorPane),
+          matching: find.byType(TextField),
+        ),
+      );
+      expect(find.byTooltip('Live preview'), findsOneWidget);
+      expect(
+        (textField.controller! as InlineMarkdownEditingController).livePreview,
+        isFalse,
+      );
     });
   });
 
@@ -102,31 +214,48 @@ void main() {
       final noteId = createNote();
 
       await tester.pumpWidget(
-        wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)),
+        wrap(
+          EditorScreen(
+            noteId: noteId,
+            saveNoteUseCase: saveNoteUseCase,
+            navigateLinkUseCase: navigateLinkUseCase,
+          ),
+        ),
       );
       await pumpUntilSettled(tester);
 
       final editorPane = find.byType(EditorPane);
       expect(editorPane, findsOneWidget);
 
-      final textField = find.descendant(of: editorPane, matching: find.byType(TextField));
-      await tester.enterText(textField, '# Updated\n\nNew content with **bold**');
+      final textField = find.descendant(
+        of: editorPane,
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(
+        textField,
+        '# Updated\n\nNew content with **bold**',
+      );
       await tester.pump();
 
-      expect(findRichTextContaining('Updated'), findsOneWidget);
+      final textFieldWidget = tester.widget<TextField>(textField);
+      expect(textFieldWidget.controller!.text, contains('Updated'));
     });
   });
 
   // ── Toolbar buttons ────────────────────────────────────────────────
 
   group('toolbar buttons', () {
-    testWidgets('editor pane has toolbar when showLineNumbers is true', (tester) async {
+    testWidgets('editor pane has toolbar when showLineNumbers is true', (
+      tester,
+    ) async {
       // The EditorScreen sets showLineNumbers: false on EditorPane.
       // Test toolbar presence at the EditorPane level with showLineNumbers: true.
       final controller = TextEditingController();
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: EditorPane(controller: controller, showLineNumbers: true)),
+          home: Scaffold(
+            body: EditorPane(controller: controller, showLineNumbers: true),
+          ),
         ),
       );
 
@@ -141,12 +270,17 @@ void main() {
       final controller = TextEditingController();
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: EditorPane(controller: controller, showLineNumbers: true)),
+          home: Scaffold(
+            body: EditorPane(controller: controller, showLineNumbers: true),
+          ),
         ),
       );
 
       final editorPane = find.byType(EditorPane);
-      final textField = find.descendant(of: editorPane, matching: find.byType(TextField));
+      final textField = find.descendant(
+        of: editorPane,
+        matching: find.byType(TextField),
+      );
 
       await tester.enterText(textField, 'hello');
       await tester.pump();
@@ -154,7 +288,9 @@ void main() {
       await tester.tap(find.byIcon(Icons.format_bold));
       await tester.pump();
 
-      final editorText = tester.widget<TextField>(find.descendant(of: editorPane, matching: find.byType(TextField)));
+      final editorText = tester.widget<TextField>(
+        find.descendant(of: editorPane, matching: find.byType(TextField)),
+      );
       expect(editorText.controller!.text.contains('**'), isTrue);
 
       controller.dispose();
@@ -164,16 +300,27 @@ void main() {
   // ── Auto-save ──────────────────────────────────────────────────────
 
   group('auto-save', () {
-    testWidgets('auto-save triggers after 2 seconds of typing pause', (tester) async {
+    testWidgets('auto-save triggers after 2 seconds of typing pause', (
+      tester,
+    ) async {
       final noteId = createNote();
 
       await tester.pumpWidget(
-        wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)),
+        wrap(
+          EditorScreen(
+            noteId: noteId,
+            saveNoteUseCase: saveNoteUseCase,
+            navigateLinkUseCase: navigateLinkUseCase,
+          ),
+        ),
       );
       await pumpUntilSettled(tester);
 
       final editorPane = find.byType(EditorPane);
-      final textField = find.descendant(of: editorPane, matching: find.byType(TextField));
+      final textField = find.descendant(
+        of: editorPane,
+        matching: find.byType(TextField),
+      );
 
       await tester.enterText(textField, '# Auto-Saved\n\nContent here.');
       await tester.pump();
@@ -189,7 +336,9 @@ void main() {
   // ── Back navigation with unsaved changes ───────────────────────────
 
   group('back navigation with unsaved changes', () {
-    testWidgets('shows unsaved changes dialog when content is dirty', (tester) async {
+    testWidgets('shows unsaved changes dialog when content is dirty', (
+      tester,
+    ) async {
       final noteId = createNote();
 
       // Wrap in a Navigator so pop goes somewhere
@@ -226,7 +375,10 @@ void main() {
 
       // Modify content
       final editorPane = find.byType(EditorPane);
-      final textField = find.descendant(of: editorPane, matching: find.byType(TextField));
+      final textField = find.descendant(
+        of: editorPane,
+        matching: find.byType(TextField),
+      );
       await tester.enterText(textField, '# Modified Content\n\nNew text.');
       await tester.pump();
 
@@ -245,13 +397,27 @@ void main() {
   // ── Wiki-link tappable ─────────────────────────────────────────────
 
   group('wiki-link tappable', () {
-    testWidgets('[[Wiki-link]] is rendered in preview and tappable', (tester) async {
-      final noteId = createNote(path: 'Link', content: '# Link\n\nSee [[OtherPage]] for details.');
+    testWidgets('[[Wiki-link]] is rendered in preview and tappable', (
+      tester,
+    ) async {
+      final noteId = createNote(
+        path: 'Link',
+        content: '# Link\n\nSee [[OtherPage]] for details.',
+      );
 
       await tester.pumpWidget(
-        wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)),
+        wrap(
+          EditorScreen(
+            noteId: noteId,
+            saveNoteUseCase: saveNoteUseCase,
+            navigateLinkUseCase: navigateLinkUseCase,
+          ),
+        ),
       );
       await pumpUntilSettled(tester);
+
+      await tester.tap(find.byTooltip('Reading view'));
+      await tester.pump();
 
       expect(find.byType(PreviewPane), findsOneWidget);
       expect(find.text('OtherPage'), findsOneWidget);
@@ -261,13 +427,24 @@ void main() {
   // ── Tag highlighting ───────────────────────────────────────────────
 
   group('tag highlighting', () {
-    testWidgets('#tag is highlighted in preview', (tester) async {
-      final noteId = createNote(content: '# My Note\n\nContent with #important tag.');
+    testWidgets('#tag is highlighted inline', (tester) async {
+      final noteId = createNote(
+        content: '# My Note\n\nContent with #important tag.',
+      );
 
       await tester.pumpWidget(
-        wrap(EditorScreen(noteId: noteId, saveNoteUseCase: saveNoteUseCase, navigateLinkUseCase: navigateLinkUseCase)),
+        wrap(
+          EditorScreen(
+            noteId: noteId,
+            saveNoteUseCase: saveNoteUseCase,
+            navigateLinkUseCase: navigateLinkUseCase,
+          ),
+        ),
       );
       await pumpUntilSettled(tester);
+
+      await tester.tap(find.byTooltip('Reading view'));
+      await tester.pump();
 
       expect(find.byType(PreviewPane), findsOneWidget);
       expect(
