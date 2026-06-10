@@ -278,7 +278,7 @@ class _EditorScreenState extends State<EditorScreen>
                 onPressed: _toggleSourceMode,
               ),
               IconButton(
-                icon: const Icon(Icons.rounded_corner),
+                icon: const Icon(Icons.chrome_reader_mode_outlined),
                 tooltip: 'Reading view',
                 onPressed: () => _setViewMode(_EditorViewMode.reading),
               ),

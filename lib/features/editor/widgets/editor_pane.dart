@@ -46,10 +46,6 @@ class InlineMarkdownEditingController extends TextEditingController {
       color: colorScheme.onSurface,
       fontStyle: FontStyle.italic,
     );
-    final headingStyle = baseStyle.copyWith(
-      color: colorScheme.onSurface,
-      fontWeight: FontWeight.w700,
-    );
     final listMarkerStyle = baseStyle.copyWith(
       color: colorScheme.primary,
       fontWeight: FontWeight.w700,
@@ -63,6 +59,10 @@ class InlineMarkdownEditingController extends TextEditingController {
     final tagStyle = baseStyle.copyWith(
       color: GraphiteColors.moss,
       fontWeight: FontWeight.w600,
+    );
+    final headingStyles = List<TextStyle>.generate(
+      6,
+      (index) => _markdownHeadingStyle(colorScheme.onSurface, index + 1),
     );
 
     final children = <InlineSpan>[];
@@ -80,7 +80,7 @@ class InlineMarkdownEditingController extends TextEditingController {
         tokenStyle,
         strongStyle,
         emphasisStyle,
-        headingStyle,
+        headingStyles,
         listMarkerStyle,
         linkStyle,
         tagStyle,
@@ -97,7 +97,7 @@ class InlineMarkdownEditingController extends TextEditingController {
     TextStyle tokenStyle,
     TextStyle strongStyle,
     TextStyle emphasisStyle,
-    TextStyle headingStyle,
+    List<TextStyle> headingStyles,
     TextStyle listMarkerStyle,
     TextStyle linkStyle,
     TextStyle tagStyle,
@@ -112,7 +112,7 @@ class InlineMarkdownEditingController extends TextEditingController {
       children.add(TextSpan(text: headingMatch[1], style: tokenStyle));
       children.add(TextSpan(text: headingMatch[2], style: baseStyle));
       start = headingMatch.end;
-      lineBaseStyle = headingStyle;
+      lineBaseStyle = headingStyles[headingMatch[1]!.length - 1];
     } else {
       final listMatch = RegExp(r'^(\s*)([-*+]|\d+\.)(\s+)').firstMatch(line);
       if (listMatch != null) {
@@ -195,6 +195,18 @@ class InlineMarkdownEditingController extends TextEditingController {
     if (cursor < text.length) {
       children.add(TextSpan(text: text.substring(cursor), style: baseStyle));
     }
+  }
+
+  static TextStyle _markdownHeadingStyle(Color color, int level) {
+    final base = switch (level) {
+      1 => GraphiteTypography.markdownH1,
+      2 => GraphiteTypography.markdownH2,
+      3 => GraphiteTypography.markdownH3,
+      4 => GraphiteTypography.markdownH4,
+      5 => GraphiteTypography.markdownH5,
+      _ => GraphiteTypography.markdownH6,
+    };
+    return base.copyWith(color: color);
   }
 }
 

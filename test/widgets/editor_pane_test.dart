@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:graphite/core/design/typography.dart';
 import 'package:graphite/features/editor/widgets/editor_pane.dart';
 
 void main() {
@@ -87,6 +88,35 @@ void main() {
 
       expect(link.style!.decoration, TextDecoration.underline);
       expect(tag.style!.fontWeight, FontWeight.w600);
+    });
+
+    testWidgets('inline markdown controller sizes heading levels', (
+      tester,
+    ) async {
+      final controller = InlineMarkdownEditingController(
+        text: '# Main\n## Section\n### Detail',
+      );
+      await tester.pumpWidget(
+        _wrapWithMaterialApp(EditorPane(controller: controller)),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      final span = controller.buildTextSpan(
+        context: tester.element(find.byType(TextField)),
+        style: textField.style,
+        withComposing: false,
+      );
+      final childSpans = span.children!.whereType<TextSpan>().toList();
+
+      final h1 = childSpans.firstWhere((child) => child.text == 'Main');
+      final h2 = childSpans.firstWhere((child) => child.text == 'Section');
+      final h3 = childSpans.firstWhere((child) => child.text == 'Detail');
+
+      expect(h1.style!.fontSize, GraphiteTypography.markdownH1.fontSize);
+      expect(h2.style!.fontSize, GraphiteTypography.markdownH2.fontSize);
+      expect(h3.style!.fontSize, GraphiteTypography.markdownH3.fontSize);
+      expect(h1.style!.fontSize, greaterThan(h2.style!.fontSize!));
+      expect(h2.style!.fontSize, greaterThan(h3.style!.fontSize!));
     });
 
     testWidgets('inline markdown controller can render raw source mode', (

@@ -91,12 +91,27 @@ class PreviewPane extends StatelessWidget {
         data: content,
         selectable: true,
         styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-          h1: GraphiteTypography.display.copyWith(color: colorScheme.onSurface),
-          h1Padding: const EdgeInsets.only(bottom: GraphiteSpacing.lg),
-          h2: GraphiteTypography.headline.copyWith(
+          h1: GraphiteTypography.markdownH1.copyWith(
             color: colorScheme.onSurface,
           ),
-          h3: GraphiteTypography.title.copyWith(color: colorScheme.onSurface),
+          h1Padding: const EdgeInsets.only(bottom: GraphiteSpacing.lg),
+          h2: GraphiteTypography.markdownH2.copyWith(
+            color: colorScheme.onSurface,
+          ),
+          h2Padding: const EdgeInsets.only(bottom: GraphiteSpacing.md),
+          h3: GraphiteTypography.markdownH3.copyWith(
+            color: colorScheme.onSurface,
+          ),
+          h3Padding: const EdgeInsets.only(bottom: GraphiteSpacing.sm),
+          h4: GraphiteTypography.markdownH4.copyWith(
+            color: colorScheme.onSurface,
+          ),
+          h5: GraphiteTypography.markdownH5.copyWith(
+            color: colorScheme.onSurface,
+          ),
+          h6: GraphiteTypography.markdownH6.copyWith(
+            color: colorScheme.onSurface.withValues(alpha: 0.78),
+          ),
           p: GraphiteTypography.body.copyWith(color: colorScheme.onSurface),
           listBullet: GraphiteTypography.body.copyWith(
             color: colorScheme.onSurface,

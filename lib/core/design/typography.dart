@@ -105,4 +105,48 @@ abstract final class GraphiteTypography {
     fontWeight: FontWeight.w400,
     height: 1.6,
   );
+
+  // ── Markdown document headings ─────────────────────────────────────
+
+  static const TextStyle markdownH1 = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 32,
+    fontWeight: FontWeight.w700,
+    height: 40 / 32,
+  );
+
+  static const TextStyle markdownH2 = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 26,
+    fontWeight: FontWeight.w700,
+    height: 34 / 26,
+  );
+
+  static const TextStyle markdownH3 = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 22,
+    fontWeight: FontWeight.w600,
+    height: 30 / 22,
+  );
+
+  static const TextStyle markdownH4 = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 26 / 18,
+  );
+
+  static const TextStyle markdownH5 = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    height: 24 / 16,
+  );
+
+  static const TextStyle markdownH6 = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 22 / 14,
+  );
 }
