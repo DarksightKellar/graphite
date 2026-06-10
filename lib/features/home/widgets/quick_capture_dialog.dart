@@ -47,27 +47,29 @@ class _QuickCaptureDialogState extends State<QuickCaptureDialog> {
   void _extractTags() {
     final text = _contentController.text;
     final tagPattern = RegExp(r'#[a-zA-Z0-9_-]+');
-    final tags =
-        tagPattern.allMatches(text).map((m) => m.group(0)!).toSet().toList();
+    final tags = tagPattern.allMatches(text).map((m) => m.group(0)!).toSet().toList();
     setState(() {
       _tags = tags;
     });
   }
 
   void _handleSave() {
-    widget.onSave?.call(
-      _titleController.text,
-      _contentController.text,
-      _tags,
-    );
+    widget.onSave?.call(_titleController.text, _contentController.text, _tags);
   }
 
   void _handleCancel() {
+    if (_hasUnsavedContent()) {
+      _showDismissConfirmDialog();
+      return;
+    }
+
     widget.onCancel?.call();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
-  bool _hasUnsavedContent() =>
-      _titleController.text.isNotEmpty || _contentController.text.isNotEmpty;
+  bool _hasUnsavedContent() => _titleController.text.isNotEmpty || _contentController.text.isNotEmpty;
 
   void _showDismissConfirmDialog() {
     showDialog<bool>(
@@ -76,18 +78,13 @@ class _QuickCaptureDialogState extends State<QuickCaptureDialog> {
         title: const Text('Discard note?'),
         content: const Text('You have unsaved content. Discard it?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep editing'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Discard'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep editing')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Discard')),
         ],
       ),
     ).then((discard) {
       if (discard == true && mounted) {
+        widget.onCancel?.call();
         setState(() => _allowPop = true);
         Navigator.of(context).pop();
       }
@@ -113,7 +110,7 @@ class _QuickCaptureDialogState extends State<QuickCaptureDialog> {
         }
       },
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -122,10 +119,7 @@ class _QuickCaptureDialogState extends State<QuickCaptureDialog> {
               controller: _titleController,
               autofocus: true,
               textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
-                hintText: 'Title',
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(hintText: 'Title', border: OutlineInputBorder()),
               maxLines: 1,
               onSubmitted: (_) => _handleSave(),
             ),
@@ -133,8 +127,7 @@ class _QuickCaptureDialogState extends State<QuickCaptureDialog> {
             TextField(
               controller: _contentController,
               decoration: const InputDecoration(
-                hintText:
-                    'Content — supports **bold**, *italic*, #tags, [[links]] markdown',
+                hintText: 'Content — supports **bold**, *italic*, #tags, [[links]] markdown',
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
@@ -144,33 +137,20 @@ class _QuickCaptureDialogState extends State<QuickCaptureDialog> {
               Text(
                 '${_contentController.text.length} chars · '
                 '${_contentController.text.split(RegExp(r'\\s+')).where((w) => w.isNotEmpty).length} words',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colorScheme.onSurface.withValues(alpha: 0.60),
-                ),
+                style: TextStyle(fontSize: 12, color: colorScheme.onSurface.withValues(alpha: 0.60)),
               ),
             ],
             if (_tags.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 6,
-                children:
-                    _tags.map((tag) => Chip(label: Text(tag))).toList(),
-              ),
+              Wrap(spacing: 6, children: _tags.map((tag) => Chip(label: Text(tag))).toList()),
             ],
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: _handleCancel,
-                  child: const Text('Cancel'),
-                ),
+                TextButton(onPressed: _handleCancel, child: const Text('Cancel')),
                 const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _handleSave,
-                  child: const Text('Save'),
-                ),
+                ElevatedButton(onPressed: _handleSave, child: const Text('Save')),
               ],
             ),
           ],
