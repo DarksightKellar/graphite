@@ -412,6 +412,48 @@ void main() {
         await tester.pump();
         expect(controller.text, equals(afterBold));
       });
+
+      testWidgets('undo and redo work for typed text', (tester) async {
+        final controller = TextEditingController(text: 'original');
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
+
+        await tester.enterText(find.byType(TextField), 'changed');
+        await tester.pump();
+
+        await tester.tap(find.byIcon(Icons.undo));
+        await tester.pump();
+        expect(controller.text, equals('original'));
+
+        await tester.tap(find.byIcon(Icons.redo));
+        await tester.pump();
+        expect(controller.text, equals('changed'));
+      });
+
+      testWidgets('new typing after undo clears redo history', (tester) async {
+        final controller = TextEditingController(text: 'original');
+        await tester.pumpWidget(
+          _wrapWithMaterialApp(
+            EditorPane(controller: controller, showLineNumbers: true),
+          ),
+        );
+
+        await tester.enterText(find.byType(TextField), 'changed');
+        await tester.pump();
+        await tester.tap(find.byIcon(Icons.undo));
+        await tester.pump();
+        expect(controller.text, equals('original'));
+
+        await tester.enterText(find.byType(TextField), 'new edit');
+        await tester.pump();
+        await tester.tap(find.byIcon(Icons.redo));
+        await tester.pump();
+
+        expect(controller.text, equals('new edit'));
+      });
     });
 
     group('Footer counts', () {

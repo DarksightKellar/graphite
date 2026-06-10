@@ -344,7 +344,29 @@ class _EditorPaneState extends State<EditorPane> {
   final List<String> _redoStack = [];
   bool _wasFocusedOnTapDown = false;
   Timer? _undoDebounceTimer;
-  String? _lastUndoState;
+  String? _lastKnownText;
+  String? _typingBatchStartText;
+  bool _isApplyingHistory = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastKnownText = widget.controller.text;
+  }
+
+  @override
+  void didUpdateWidget(EditorPane oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      _undoStack.clear();
+      _redoStack.clear();
+      _undoDebounceTimer?.cancel();
+      _typingBatchStartText = null;
+      _lastKnownText = widget.controller.text;
+    } else {
+      _lastKnownText ??= widget.controller.text;
+    }
+  }
 
   @override
   void dispose() {
@@ -355,22 +377,36 @@ class _EditorPaneState extends State<EditorPane> {
   }
 
   void _pushUndoState() {
-    _undoStack.add(widget.controller.text);
-    _redoStack.clear();
-    _lastUndoState = widget.controller.text;
+    _pushUndoText(widget.controller.text);
   }
 
-  void _scheduleUndoState() {
+  void _pushUndoText(String text) {
+    if (_undoStack.isNotEmpty && _undoStack.last == text) return;
+    _undoStack.add(text);
+    _redoStack.clear();
+  }
+
+  void _recordTextEdit(String text) {
+    if (_isApplyingHistory) return;
+
+    final previous = _lastKnownText ?? widget.controller.text;
+    if (text == previous) return;
+
+    _typingBatchStartText ??= previous;
+    if (_typingBatchStartText == previous) {
+      _pushUndoText(previous);
+    }
+
+    _lastKnownText = text;
     _undoDebounceTimer?.cancel();
     _undoDebounceTimer = Timer(const Duration(milliseconds: 500), () {
-      // Only push if text actually changed since last undo state
-      if (_lastUndoState != widget.controller.text) {
-        _pushUndoState();
-      }
+      _typingBatchStartText = null;
     });
   }
 
   void _insertMarkup(String prefix, String suffix) {
+    _undoDebounceTimer?.cancel();
+    _typingBatchStartText = null;
     _pushUndoState();
 
     final controller = widget.controller;
@@ -402,9 +438,12 @@ class _EditorPaneState extends State<EditorPane> {
     }
 
     widget.onChanged?.call(controller.text);
+    _lastKnownText = controller.text;
   }
 
   void _insertLinePrefix(String prefix) {
+    _undoDebounceTimer?.cancel();
+    _typingBatchStartText = null;
     _pushUndoState();
 
     final controller = widget.controller;
@@ -450,31 +489,38 @@ class _EditorPaneState extends State<EditorPane> {
     }
 
     widget.onChanged?.call(controller.text);
+    _lastKnownText = controller.text;
   }
 
   void _undo() {
     if (_undoStack.isEmpty) return;
     _undoDebounceTimer?.cancel();
+    _typingBatchStartText = null;
     _redoStack.add(widget.controller.text);
     final previous = _undoStack.removeLast();
+    _isApplyingHistory = true;
     widget.controller.value = TextEditingValue(
       text: previous,
       selection: TextSelection.collapsed(offset: previous.length),
     );
-    _lastUndoState = previous;
+    _isApplyingHistory = false;
+    _lastKnownText = previous;
     widget.onChanged?.call(previous);
   }
 
   void _redo() {
     if (_redoStack.isEmpty) return;
     _undoDebounceTimer?.cancel();
+    _typingBatchStartText = null;
     _undoStack.add(widget.controller.text);
     final next = _redoStack.removeLast();
+    _isApplyingHistory = true;
     widget.controller.value = TextEditingValue(
       text: next,
       selection: TextSelection.collapsed(offset: next.length),
     );
-    _lastUndoState = next;
+    _isApplyingHistory = false;
+    _lastKnownText = next;
     widget.onChanged?.call(next);
   }
 
@@ -505,7 +551,7 @@ class _EditorPaneState extends State<EditorPane> {
                     focusNode: _focusNode,
                     scrollController: _scrollController,
                     onChanged: (text) {
-                      _scheduleUndoState();
+                      _recordTextEdit(text);
                       widget.onChanged?.call(text);
                     },
                     style: GraphiteTypography.mono.copyWith(
