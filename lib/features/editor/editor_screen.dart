@@ -238,8 +238,6 @@ class _EditorScreenState extends State<EditorScreen>
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Edit Note'),
-          backgroundColor: colorScheme.primary,
-          foregroundColor: colorScheme.onPrimary,
           actions: [
             if (_showSaved)
               Padding(
