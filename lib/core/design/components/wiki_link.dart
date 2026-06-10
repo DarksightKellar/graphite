@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:graphite/core/design/typography.dart';
+
 /// A tappable wiki-link pill used in markdown preview.
 ///
 /// Renders as a rounded pill with secondary-color background and underline,
@@ -8,11 +10,7 @@ class GraphiteWikiLinkPill extends StatelessWidget {
   final String title;
   final VoidCallback? onTap;
 
-  const GraphiteWikiLinkPill({
-    super.key,
-    required this.title,
-    this.onTap,
-  });
+  const GraphiteWikiLinkPill({super.key, required this.title, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -21,20 +19,17 @@ class GraphiteWikiLinkPill extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
           color: scheme.secondary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: scheme.secondary.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: scheme.secondary),
         ),
         child: Text(
           title,
-          style: TextStyle(
+          style: GraphiteTypography.body.copyWith(
             color: scheme.secondary,
-            fontSize: 15,
             fontWeight: FontWeight.w500,
-            decoration: TextDecoration.underline,
-            decorationColor: scheme.secondary,
           ),
         ),
       ),

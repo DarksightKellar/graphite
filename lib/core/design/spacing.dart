@@ -41,10 +41,16 @@ abstract final class GraphiteSpacing {
 
   /// Card padding — horizontal.
   static const EdgeInsets cardPadding = EdgeInsets.symmetric(
-    horizontal: md,
-    vertical: sm + xs, // 12
+    horizontal: xl,
+    vertical: lg,
   );
 
   /// Card gap in list.
-  static const double cardGap = sm;
+  static const double cardGap = lg;
+
+  /// Horizontal page inset.
+  static const double pageInset = 30;
+
+  /// Compact page inset for narrow layouts.
+  static const double compactPageInset = lg;
 }

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'package:graphite/core/design/components/graphite_card.dart';
+import 'package:graphite/core/design/components/link_count_badge.dart';
 import 'package:graphite/core/design/components/tag_pill.dart';
+import 'package:graphite/core/design/spacing.dart';
+import 'package:graphite/core/design/typography.dart';
 import 'package:graphite/core/models/note.dart';
 
 /// A styled note card for the HomeScreen.
@@ -29,13 +33,21 @@ class HomeNoteCard extends StatelessWidget {
     if (lines.isNotEmpty) {
       final first = lines.first;
       if (first.startsWith('# ')) {
-        return first.substring(2);
+        final heading = first.substring(2).trim();
+        if (heading.isNotEmpty) return heading;
       }
       if (first.startsWith('## ')) {
-        return first.substring(3);
+        final heading = first.substring(3).trim();
+        if (heading.isNotEmpty) return heading;
       }
       if (first.isNotEmpty) {
         return first.length > 60 ? '${first.substring(0, 57)}...' : first;
+      }
+      for (var index = 1; index < lines.length; index += 1) {
+        final candidate = lines[index];
+        if (candidate.isNotEmpty) {
+          return candidate.length > 60 ? '${candidate.substring(0, 57)}...' : candidate;
+        }
       }
     }
     return note.path;
@@ -65,106 +77,59 @@ class HomeNoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final tag = note.tags.isNotEmpty ? '#${note.tags.first}' : null;
+    final tag = note.tags.isNotEmpty ? note.tags.first : null;
 
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      color: isSelected ? scheme.primary.withValues(alpha: 0.08) : null,
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: selectionMode ? null : onLongPress,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
+    return GraphiteCard(
+      selected: isSelected,
+      margin: const EdgeInsets.only(bottom: GraphiteSpacing.cardGap),
+      onTap: onTap,
+      onLongPress: selectionMode ? null : onLongPress,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _title,
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (isPinned) ...[
-                              const SizedBox(width: 8),
-                              Icon(Icons.push_pin, size: 16, color: scheme.secondary),
-                            ],
-                          ],
-                        ),
-                        if (_subtitle.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Text(
-                            _subtitle,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: scheme.onSurface.withValues(alpha: 0.64),
-                              height: 1.4,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
+              Expanded(
+                child: Text(
+                  _title,
+                  style: GraphiteTypography.title.copyWith(color: scheme.onSurface, fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Text(
-                    _formatDate(note.updatedAt),
-                    style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
-                  ),
-                  const SizedBox(width: 6),
-                  Text('•', style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6))),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$_wordCount words',
-                    style: TextStyle(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
-                  ),
-                  if (linkCount > 0) ...[
-                    const SizedBox(width: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: scheme.secondary.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.link, size: 12, color: scheme.secondary),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$linkCount',
-                            style: TextStyle(fontSize: 11, color: scheme.secondary, fontWeight: FontWeight.w700),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  if (tag != null) ...[
-                    const Spacer(),
-                    GraphiteTagPill(tag: tag),
-                  ],
-                ],
-              ),
+              if (isPinned) ...[
+                const SizedBox(width: GraphiteSpacing.sm),
+                Icon(Icons.push_pin, size: 18, color: scheme.secondary),
+              ],
             ],
           ),
-        ),
+          if (_subtitle.isNotEmpty) ...[
+            const SizedBox(height: GraphiteSpacing.xs),
+            Text(
+              _subtitle,
+              style: GraphiteTypography.body.copyWith(color: scheme.onSurface.withValues(alpha: 0.62)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          const SizedBox(height: GraphiteSpacing.lg),
+          Row(
+            children: [
+              Text(
+                _formatDate(note.updatedAt),
+                style: GraphiteTypography.caption.copyWith(color: scheme.onSurface.withValues(alpha: 0.62)),
+              ),
+              _MetadataDot(color: scheme.onSurface.withValues(alpha: 0.62)),
+              Text(
+                '$_wordCount words',
+                style: GraphiteTypography.caption.copyWith(color: scheme.onSurface.withValues(alpha: 0.62)),
+              ),
+              if (linkCount > 0) ...[const SizedBox(width: GraphiteSpacing.md), LinkCountBadge(count: linkCount)],
+              if (tag != null) ...[const Spacer(), GraphiteTagPill(tag: tag)],
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -185,5 +150,19 @@ class HomeNoteCard extends StatelessWidget {
       return '$monthStr ${date.day}';
     }
     return '$monthStr ${date.day}, ${date.year}';
+  }
+}
+
+class _MetadataDot extends StatelessWidget {
+  final Color color;
+
+  const _MetadataDot({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: GraphiteSpacing.md),
+      child: Text('•', style: GraphiteTypography.caption.copyWith(color: color)),
+    );
   }
 }

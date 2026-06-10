@@ -6,77 +6,94 @@ import 'package:flutter/material.dart';
 // ignore_for_file: public_member_api_docs
 
 abstract final class GraphiteTypography {
+  static const String fontFamily = 'Inter';
+
   // ── Display ───────────────────────────────────────────────────────
 
-  /// Large heading — 28px bold.
+  /// Brand/display heading — 56/64 bold.
   static const TextStyle display = TextStyle(
-    fontSize: 28,
+    fontFamily: fontFamily,
+    fontSize: 56,
     fontWeight: FontWeight.bold,
-    height: 1.2,
-    letterSpacing: -0.5,
+    height: 64 / 56,
   );
 
-  /// Section heading — 22px semi-bold.
+  /// Screen heading — 32/40 bold.
+  static const TextStyle h1 = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 32,
+    fontWeight: FontWeight.bold,
+    height: 40 / 32,
+  );
+
+  /// Section heading — 24/32 semi-bold.
   static const TextStyle headline = TextStyle(
-    fontSize: 22,
+    fontFamily: fontFamily,
+    fontSize: 24,
     fontWeight: FontWeight.w600,
-    height: 1.3,
-    letterSpacing: -0.3,
+    height: 32 / 24,
   );
 
-  /// Card title / subtitle — 18px medium.
+  /// Card title / subtitle — 20/28 semi-bold.
   static const TextStyle title = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w500,
-    height: 1.3,
+    fontFamily: fontFamily,
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    height: 28 / 20,
   );
 
   // ── Body ──────────────────────────────────────────────────────────
 
   /// Body text — 16px regular.
   static const TextStyle body = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 16,
     fontWeight: FontWeight.w400,
-    height: 1.5,
+    height: 24 / 16,
   );
 
   /// Body emphasis — 16px semi-bold.
   static const TextStyle bodyBold = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 16,
     fontWeight: FontWeight.w600,
-    height: 1.5,
+    height: 24 / 16,
   );
 
   // ── Caption ───────────────────────────────────────────────────────
 
   /// Small body — 14px regular.
   static const TextStyle caption = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 14,
     fontWeight: FontWeight.w400,
-    height: 1.4,
+    height: 20 / 14,
   );
 
-  /// Metadata / labels — 13px regular.
+  /// Caption / metadata — 12/16 regular.
   static const TextStyle label = TextStyle(
-    fontSize: 13,
+    fontFamily: fontFamily,
+    fontSize: 12,
     fontWeight: FontWeight.w400,
-    height: 1.3,
+    height: 16 / 12,
   );
 
   /// Fine print / overline — 11px regular.
   static const TextStyle overline = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 11,
     fontWeight: FontWeight.w400,
     height: 1.3,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   );
 
   /// Tiny badge text — 10px medium.
   static const TextStyle badge = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 10,
     fontWeight: FontWeight.w500,
     height: 1.2,
-    letterSpacing: 0.3,
+    letterSpacing: 0,
   );
 
   // ── Monospace ─────────────────────────────────────────────────────

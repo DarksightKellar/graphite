@@ -71,7 +71,8 @@ class _EditorScreenState extends State<EditorScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       _save();
     }
   }
@@ -126,9 +127,9 @@ class _EditorScreenState extends State<EditorScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Save failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
       }
     }
   }
@@ -178,9 +179,7 @@ class _EditorScreenState extends State<EditorScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Unsaved Changes'),
-        content: const Text(
-          'You have unsaved changes. Discard them?',
-        ),
+        content: const Text('You have unsaved changes. Discard them?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -206,9 +205,7 @@ class _EditorScreenState extends State<EditorScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Unsaved Changes'),
-        content: const Text(
-          'You have unsaved changes. Discard them?',
-        ),
+        content: const Text('You have unsaved changes. Discard them?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -250,8 +247,7 @@ class _EditorScreenState extends State<EditorScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.check,
-                        size: 18, color: colorScheme.tertiary),
+                    Icon(Icons.check, size: 18, color: colorScheme.tertiary),
                     const SizedBox(width: 4),
                     Text(
                       'Saved',
@@ -286,40 +282,40 @@ class _EditorScreenState extends State<EditorScreen>
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _loadError != null
-                ? Center(
-                    child: Text(
-                      'Failed to load: $_loadError',
-                      style: TextStyle(color: colorScheme.error),
+            ? Center(
+                child: Text(
+                  'Failed to load: $_loadError',
+                  style: TextStyle(color: colorScheme.error),
+                ),
+              )
+            : GestureDetector(
+                onHorizontalDragEnd: (details) {
+                  if (details.primaryVelocity != null &&
+                      details.primaryVelocity! > 300) {
+                    _handleSwipeBack();
+                  }
+                },
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: EditorPane(
+                        controller: _controller,
+                        onChanged: _onTextChanged,
+                        showLineNumbers: true,
+                      ),
                     ),
-                  )
-                : GestureDetector(
-                    onHorizontalDragEnd: (details) {
-                      if (details.primaryVelocity != null &&
-                          details.primaryVelocity! > 300) {
-                        _handleSwipeBack();
-                      }
-                    },
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 1,
-                          child: EditorPane(
-                            controller: _controller,
-                            onChanged: _onTextChanged,
-                            showLineNumbers: false,
-                          ),
-                        ),
-                        const VerticalDivider(thickness: 1, width: 1),
-                        Expanded(
-                          flex: 2,
-                          child: PreviewPane(
-                            content: _controller.text,
-                            onLinkTap: _onLinkTap,
-                          ),
-                        ),
-                      ],
+                    const VerticalDivider(thickness: 1, width: 1),
+                    Expanded(
+                      flex: 2,
+                      child: PreviewPane(
+                        content: _controller.text,
+                        onLinkTap: _onLinkTap,
+                      ),
                     ),
-                  ),
+                  ],
+                ),
+              ),
       ),
     );
   }

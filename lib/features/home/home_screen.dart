@@ -10,6 +10,8 @@ import 'package:graphite/features/home/widgets/home_note_card.dart';
 import 'package:graphite/features/home/widgets/home_search_bar.dart';
 import 'package:graphite/features/home/widgets/home_tag_filter_bar.dart';
 import 'package:graphite/features/home/widgets/quick_capture_dialog.dart';
+import 'package:graphite/core/design/spacing.dart';
+import 'package:graphite/core/design/typography.dart';
 import 'package:graphite/core/models/note.dart';
 import 'package:graphite/core/models/tag.dart';
 
@@ -94,10 +96,16 @@ class _HomeScreenState extends State<HomeScreen> {
           'This cannot be undone.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),
@@ -248,14 +256,28 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: _selectionMode
           ? AppBar(
               title: Text('${_selectedNoteIds.length} selected'),
-              backgroundColor: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).colorScheme.surface,
-              foregroundColor: Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onSurface,
-              leading: IconButton(icon: const Icon(Icons.close), onPressed: _exitSelectionMode),
+              backgroundColor:
+                  Theme.of(context).appBarTheme.backgroundColor ??
+                  Theme.of(context).colorScheme.surface,
+              foregroundColor:
+                  Theme.of(context).appBarTheme.foregroundColor ??
+                  Theme.of(context).colorScheme.onSurface,
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _exitSelectionMode,
+              ),
               actions: [
-                IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Delete selected', onPressed: _bulkDelete),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Delete selected',
+                  onPressed: _bulkDelete,
+                ),
               ],
             )
-          : const PreferredSize(preferredSize: Size.fromHeight(0), child: SizedBox.shrink()),
+          : const PreferredSize(
+              preferredSize: Size.fromHeight(0),
+              child: SizedBox.shrink(),
+            ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,7 +289,11 @@ class _HomeScreenState extends State<HomeScreen> {
               onClear: _clearSearch,
             ),
             if (_availableTags.isNotEmpty)
-              HomeTagFilterBar(tags: _availableTags, selectedTag: _activeTagFilter, onTagSelected: _selectTag),
+              HomeTagFilterBar(
+                tags: _availableTags,
+                selectedTag: _activeTagFilter,
+                onTagSelected: _selectTag,
+              ),
             Expanded(child: _buildNotesList()),
             if (_activeTagFilter != null) _buildTagFilterBanner(),
           ],
@@ -298,14 +324,20 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               Icons.note_add_outlined,
               size: 48,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.38),
             ),
             const SizedBox(height: 8),
             Text(
               _searchQuery.isEmpty
                   ? 'No notes yet. Tap + to create your first note.'
                   : 'No notes matching "$_searchQuery"',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+              style: TextStyle(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
             ),
           ],
         ),
@@ -315,7 +347,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return RefreshIndicator(
       onRefresh: _loadNotes,
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: GraphiteSpacing.pageInset,
+          vertical: GraphiteSpacing.sm,
+        ),
         itemCount: _displayedNotes.length,
         itemBuilder: (context, index) {
           final note = _displayedNotes[index];
@@ -344,10 +379,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       'This cannot be undone.',
                     ),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
                       TextButton(
                         onPressed: () => Navigator.pop(context, true),
-                        child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                        child: Text(
+                          'Delete',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -367,13 +410,19 @@ class _HomeScreenState extends State<HomeScreen> {
               alignment: Alignment.centerLeft,
               padding: const EdgeInsets.only(left: 20),
               color: Theme.of(context).colorScheme.tertiary,
-              child: Icon(Icons.push_pin, color: Theme.of(context).colorScheme.onPrimary),
+              child: Icon(
+                Icons.push_pin,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
             ),
             secondaryBackground: Container(
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 20),
               color: Theme.of(context).colorScheme.error,
-              child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onPrimary),
+              child: Icon(
+                Icons.delete,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
             ),
             child: HomeNoteCard(
               note: note,
@@ -381,8 +430,10 @@ class _HomeScreenState extends State<HomeScreen> {
               isSelected: _selectionMode && _selectedNoteIds.contains(note.id),
               linkCount: _linkCounts[note.id] ?? 0,
               selectionMode: _selectionMode,
-              onTap: () => _selectionMode ? _toggleSelection(note) : _openNote(note),
-              onLongPress: () => _selectionMode ? null : _enterSelectionMode(note),
+              onTap: () =>
+                  _selectionMode ? _toggleSelection(note) : _openNote(note),
+              onLongPress: () =>
+                  _selectionMode ? null : _enterSelectionMode(note),
             ),
           );
         },
@@ -398,17 +449,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTagFilterBanner() {
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+      padding: const EdgeInsets.symmetric(
+        horizontal: GraphiteSpacing.pageInset,
+        vertical: GraphiteSpacing.sm,
+      ),
+      color: scheme.secondary.withValues(alpha: 0.08),
       child: Row(
         children: [
-          Icon(Icons.filter_alt, size: 16, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 8),
+          Icon(Icons.filter_alt, size: 16, color: scheme.secondary),
+          const SizedBox(width: GraphiteSpacing.sm),
           Expanded(
             child: Text(
               'Filtered by $_activeTagFilter ($_filteredCount note${_filteredCount == 1 ? '' : 's'})',
-              style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w500),
+              style: GraphiteTypography.label.copyWith(
+                color: scheme.secondary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           IconButton(
@@ -455,7 +514,10 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       isScrollControlled: true,
       builder: (context) => FadeTransition(
-        opacity: CurvedAnimation(parent: ModalRoute.of(context)!.animation!, curve: Curves.easeIn),
+        opacity: CurvedAnimation(
+          parent: ModalRoute.of(context)!.animation!,
+          curve: Curves.easeIn,
+        ),
         child: QuickCaptureDialog(
           onSave: (title, content, tags) async {
             _isQuickCaptureOpen = false;
@@ -468,7 +530,9 @@ class _HomeScreenState extends State<HomeScreen> {
             } catch (e) {
               debugPrint('Quick capture save failed: $e');
               if (!mounted) return;
-              ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(content: Text('Failed to save note')));
+              ScaffoldMessenger.of(this.context).showSnackBar(
+                const SnackBar(content: Text('Failed to save note')),
+              );
             }
           },
           onCancel: () {

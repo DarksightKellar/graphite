@@ -4,6 +4,8 @@ import 'package:markdown/markdown.dart' as md;
 
 import 'package:graphite/core/design/components/tag_chip.dart';
 import 'package:graphite/core/design/components/wiki_link.dart';
+import 'package:graphite/core/design/spacing.dart';
+import 'package:graphite/core/design/typography.dart';
 
 // ── Inline syntax definitions (flutter_markdown integration) ──────
 
@@ -61,11 +63,7 @@ class PreviewPane extends StatelessWidget {
   final String content;
   final void Function(String title)? onLinkTap;
 
-  const PreviewPane({
-    super.key,
-    required this.content,
-    this.onLinkTap,
-  });
+  const PreviewPane({super.key, required this.content, this.onLinkTap});
 
   @override
   Widget build(BuildContext context) {
@@ -74,13 +72,12 @@ class PreviewPane extends StatelessWidget {
     if (content.isEmpty) {
       return Container(
         color: colorScheme.surface,
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(GraphiteSpacing.xxl),
         child: Center(
           child: Text(
             'No content to preview',
-            style: TextStyle(
+            style: GraphiteTypography.caption.copyWith(
               color: colorScheme.onSurface.withValues(alpha: 0.38),
-              fontSize: 14,
             ),
           ),
         ),
@@ -90,17 +87,27 @@ class PreviewPane extends StatelessWidget {
     return Container(
       color: colorScheme.surface,
       child: Markdown(
+        padding: const EdgeInsets.fromLTRB(44, 44, 44, 32),
         data: content,
         selectable: true,
-        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)),
+        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+          h1: GraphiteTypography.display.copyWith(color: colorScheme.onSurface),
+          h1Padding: const EdgeInsets.only(bottom: GraphiteSpacing.lg),
+          h2: GraphiteTypography.headline.copyWith(
+            color: colorScheme.onSurface,
+          ),
+          h3: GraphiteTypography.title.copyWith(color: colorScheme.onSurface),
+          p: GraphiteTypography.body.copyWith(color: colorScheme.onSurface),
+          listBullet: GraphiteTypography.body.copyWith(
+            color: colorScheme.onSurface,
+          ),
+          blockSpacing: GraphiteSpacing.lg,
+        ),
         builders: {
           'wikilink': _WikiLinkBuilder(onTap: onLinkTap),
           'tag': _TagBuilder(),
         },
-        inlineSyntaxes: [
-          _WikiLinkSyntax(),
-          _TagSyntax(),
-        ],
+        inlineSyntaxes: [_WikiLinkSyntax(), _TagSyntax()],
       ),
     );
   }

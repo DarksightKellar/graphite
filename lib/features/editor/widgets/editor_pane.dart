@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:graphite/core/design/spacing.dart';
+import 'package:graphite/core/design/typography.dart';
+
 /// A clean, distraction-free markdown editor pane.
 /// Accepts a TextEditingController to bind content.
 class EditorPane extends StatefulWidget {
@@ -58,16 +61,10 @@ class _EditorPaneState extends State<EditorPane> {
     } else {
       // Insert at cursor with cursor placed between prefix and suffix
       final cursorPos = selection.isValid ? selection.start : text.length;
-      final newText = text.replaceRange(
-        cursorPos,
-        cursorPos,
-        '$prefix$suffix',
-      );
+      final newText = text.replaceRange(cursorPos, cursorPos, '$prefix$suffix');
       controller.value = TextEditingValue(
         text: newText,
-        selection: TextSelection.collapsed(
-          offset: cursorPos + prefix.length,
-        ),
+        selection: TextSelection.collapsed(offset: cursorPos + prefix.length),
       );
     }
 
@@ -110,11 +107,7 @@ class _EditorPaneState extends State<EditorPane> {
         ),
       );
     } else {
-      final newText = text.replaceRange(
-        lineStart,
-        lineStart,
-        prefixWithSpace,
-      );
+      final newText = text.replaceRange(lineStart, lineStart, prefixWithSpace);
       controller.value = TextEditingValue(
         text: newText,
         selection: TextSelection.collapsed(
@@ -156,17 +149,14 @@ class _EditorPaneState extends State<EditorPane> {
               controller: widget.controller,
               focusNode: _focusNode,
               onChanged: widget.onChanged,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 14,
-                height: 1.6,
+              style: GraphiteTypography.mono.copyWith(
                 color: colorScheme.onSurface,
               ),
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                  horizontal: GraphiteSpacing.xl,
+                  vertical: GraphiteSpacing.xl,
                 ),
               ),
               maxLines: null,
@@ -184,54 +174,48 @@ class _EditorPaneState extends State<EditorPane> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        border: Border(
-          bottom: BorderSide(
-            color: colorScheme.onSurface.withValues(alpha: 0.12),
-          ),
-        ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: GraphiteSpacing.lg,
+        vertical: GraphiteSpacing.sm,
       ),
-      child: Row(
-        children: [
-          _toolbarButton(
-            icon: Icons.format_bold,
-            tooltip: 'Bold (**)',
-            onPressed: () => _insertMarkup('**', '**'),
-          ),
-          _toolbarButton(
-            icon: Icons.format_italic,
-            tooltip: 'Italic (*)',
-            onPressed: () => _insertMarkup('*', '*'),
-          ),
-          _toolbarButton(
-            icon: Icons.title,
-            tooltip: 'Heading (#)',
-            onPressed: () => _insertLinePrefix('#'),
-          ),
-          _toolbarButton(
-            icon: Icons.format_list_bulleted,
-            tooltip: 'List (-)',
-            onPressed: () => _insertLinePrefix('-'),
-          ),
-          _toolbarButton(
-            icon: Icons.link,
-            tooltip: 'Link ([[]])',
-            onPressed: () => _insertMarkup('[[', ']]'),
-          ),
-          const Spacer(),
-          _toolbarButton(
-            icon: Icons.undo,
-            tooltip: 'Undo',
-            onPressed: _undo,
-          ),
-          _toolbarButton(
-            icon: Icons.redo,
-            tooltip: 'Redo',
-            onPressed: _redo,
-          ),
-        ],
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(bottom: BorderSide(color: colorScheme.outline)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _toolbarButton(
+              icon: Icons.format_bold,
+              tooltip: 'Bold (**)',
+              onPressed: () => _insertMarkup('**', '**'),
+            ),
+            _toolbarButton(
+              icon: Icons.format_italic,
+              tooltip: 'Italic (*)',
+              onPressed: () => _insertMarkup('*', '*'),
+            ),
+            _toolbarButton(
+              icon: Icons.title,
+              tooltip: 'Heading (#)',
+              onPressed: () => _insertLinePrefix('#'),
+            ),
+            _toolbarButton(
+              icon: Icons.format_list_bulleted,
+              tooltip: 'List (-)',
+              onPressed: () => _insertLinePrefix('-'),
+            ),
+            _toolbarButton(
+              icon: Icons.link,
+              tooltip: 'Link ([[]])',
+              onPressed: () => _insertMarkup('[[', ']]'),
+            ),
+            const SizedBox(width: GraphiteSpacing.xl),
+            _toolbarButton(icon: Icons.undo, tooltip: 'Undo', onPressed: _undo),
+            _toolbarButton(icon: Icons.redo, tooltip: 'Redo', onPressed: _redo),
+          ],
+        ),
       ),
     );
   }
@@ -249,12 +233,8 @@ class _EditorPaneState extends State<EditorPane> {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(4),
         child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Icon(
-            icon,
-            size: 20,
-            color: colorScheme.onSurface.withValues(alpha: 0.70),
-          ),
+          padding: const EdgeInsets.all(GraphiteSpacing.sm),
+          child: Icon(icon, size: 24, color: colorScheme.onSurface),
         ),
       ),
     );
@@ -268,8 +248,14 @@ class _EditorPaneState extends State<EditorPane> {
     final lineCount = _lineCount(text);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      color: colorScheme.surfaceContainerHighest,
+      padding: const EdgeInsets.symmetric(
+        horizontal: GraphiteSpacing.lg,
+        vertical: GraphiteSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(top: BorderSide(color: colorScheme.outline)),
+      ),
       child: Row(
         children: [
           Flexible(

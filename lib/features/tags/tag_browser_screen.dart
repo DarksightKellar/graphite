@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:graphite/core/design/components/tag_pill.dart';
+import 'package:graphite/core/design/spacing.dart';
+import 'package:graphite/core/design/typography.dart';
 import 'package:graphite/core/models/tag.dart';
 import 'package:graphite/features/home/usecases/note_list_use_case.dart';
 
@@ -44,40 +47,55 @@ class _TagBrowserScreenState extends State<TagBrowserScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tags'),
-        // Use theme's AppBar styling, previously had transparent bg + white text bug
-      ),
+      appBar: AppBar(title: const Text('Tags')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _tags.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.tag_outlined,
-                          size: 64,
-                          color: colorScheme.onSurface.withValues(alpha: 0.38)),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No tags found',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: colorScheme.onSurface.withValues(alpha: 0.60),
-                        ),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.tag_outlined,
+                    size: 64,
+                    color: colorScheme.onSurface.withValues(alpha: 0.38),
                   ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _tags.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final tag = _tags[index];
-                    return _buildTagRow(tag);
-                  },
-                ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No tags found',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: colorScheme.onSurface.withValues(alpha: 0.60),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(
+                GraphiteSpacing.pageInset,
+                38,
+                GraphiteSpacing.pageInset,
+                GraphiteSpacing.xxl,
+              ),
+              itemCount: _tags.length + 1,
+              separatorBuilder: (_, index) => index == 0
+                  ? const SizedBox(height: GraphiteSpacing.xl)
+                  : Divider(height: 32, color: colorScheme.outline),
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Text(
+                    'ALL TAGS',
+                    style: GraphiteTypography.overline.copyWith(
+                      color: colorScheme.onSurface.withValues(alpha: 0.72),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  );
+                }
+                final tag = _tags[index - 1];
+                return _buildTagRow(tag);
+              },
+            ),
     );
   }
 
@@ -86,39 +104,33 @@ class _TagBrowserScreenState extends State<TagBrowserScreen> {
 
     return InkWell(
       onTap: () => Navigator.pop(context, tag.id),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      borderRadius: BorderRadius.circular(GraphiteSpacing.cardRadius),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: GraphiteSpacing.sm),
         child: Row(
           children: [
-            Icon(Icons.tag, color: colorScheme.primary, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                tag.id,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: colorScheme.primary,
+            SizedBox(
+              width: 142,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: GraphiteTagPill(
+                  tag: tag.id,
+                  filled: true,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 14,
+                  ),
+                  textStyle: GraphiteTypography.title,
                 ),
               ),
             ),
+            const SizedBox(width: GraphiteSpacing.xl),
             Text(
               '${tag.noteCount} note${tag.noteCount == 1 ? '' : 's'}',
-              style: TextStyle(
-                fontSize: 12,
+              style: GraphiteTypography.body.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.50),
-                fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right,
-                size: 18,
-                color: colorScheme.onSurface.withValues(alpha: 0.38)),
           ],
         ),
       ),
