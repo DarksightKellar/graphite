@@ -90,6 +90,96 @@ void main() {
       expect(tag.style!.fontWeight, FontWeight.w600);
     });
 
+    testWidgets('inline markdown controller uses document body typography', (
+      tester,
+    ) async {
+      final controller = InlineMarkdownEditingController(text: 'plain body');
+      await tester.pumpWidget(
+        _wrapWithMaterialApp(EditorPane(controller: controller)),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      final span = controller.buildTextSpan(
+        context: tester.element(find.byType(TextField)),
+        style: textField.style,
+        withComposing: false,
+      );
+      final body = span.children!.whereType<TextSpan>().first;
+
+      expect(body.style!.fontSize, GraphiteTypography.body.fontSize);
+      expect(body.style!.fontFamily, GraphiteTypography.fontFamily);
+    });
+
+    testWidgets('inline markdown controller styles additional inline syntax', (
+      tester,
+    ) async {
+      final controller = InlineMarkdownEditingController(
+        text:
+            'Use `code`, __bold__, _italic_, ~~old~~, ==mark==, and [site](https://example.com).',
+      );
+      await tester.pumpWidget(
+        _wrapWithMaterialApp(EditorPane(controller: controller)),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      final span = controller.buildTextSpan(
+        context: tester.element(find.byType(TextField)),
+        style: textField.style,
+        withComposing: false,
+      );
+      final childSpans = span.children!.whereType<TextSpan>().toList();
+
+      final code = childSpans.firstWhere((child) => child.text == 'code');
+      final bold = childSpans.firstWhere((child) => child.text == 'bold');
+      final italic = childSpans.firstWhere((child) => child.text == 'italic');
+      final strike = childSpans.firstWhere((child) => child.text == 'old');
+      final highlight = childSpans.firstWhere((child) => child.text == 'mark');
+      final link = childSpans.firstWhere((child) => child.text == 'site');
+
+      expect(code.style!.fontFamily, GraphiteTypography.mono.fontFamily);
+      expect(bold.style!.fontWeight, FontWeight.w700);
+      expect(italic.style!.fontStyle, FontStyle.italic);
+      expect(strike.style!.decoration, TextDecoration.lineThrough);
+      expect(highlight.style!.backgroundColor, isNotNull);
+      expect(link.style!.decoration, TextDecoration.underline);
+      expect(span.toPlainText(), equals(controller.text));
+    });
+
+    testWidgets('inline markdown controller styles block syntax', (
+      tester,
+    ) async {
+      final controller = InlineMarkdownEditingController(
+        text:
+            '> Quote\n- [x] Done\n- [ ] Todo\n---\n```dart\nfinal x = 1;\n```',
+      );
+      await tester.pumpWidget(
+        _wrapWithMaterialApp(EditorPane(controller: controller)),
+      );
+
+      final textField = tester.widget<TextField>(find.byType(TextField));
+      final span = controller.buildTextSpan(
+        context: tester.element(find.byType(TextField)),
+        style: textField.style,
+        withComposing: false,
+      );
+      final childSpans = span.children!.whereType<TextSpan>().toList();
+
+      final quote = childSpans.firstWhere((child) => child.text == 'Quote');
+      final done = childSpans.firstWhere((child) => child.text == 'Done');
+      final todo = childSpans.firstWhere((child) => child.text == 'Todo');
+      final code = childSpans.firstWhere(
+        (child) => child.text == 'final x = 1;',
+      );
+      final rule = childSpans.firstWhere((child) => child.text == '---');
+
+      expect(quote.style!.fontStyle, FontStyle.italic);
+      expect(done.style!.decoration, TextDecoration.lineThrough);
+      expect(todo.style!.decoration, isNot(TextDecoration.lineThrough));
+      expect(code.style!.fontFamily, GraphiteTypography.mono.fontFamily);
+      expect(rule.style!.color, isNot(GraphiteTypography.body.color));
+      expect(span.toPlainText(), equals(controller.text));
+    });
+
     testWidgets('inline markdown controller sizes heading levels', (
       tester,
     ) async {
@@ -117,27 +207,6 @@ void main() {
       expect(h3.style!.fontSize, GraphiteTypography.markdownH3.fontSize);
       expect(h1.style!.fontSize, greaterThan(h2.style!.fontSize!));
       expect(h2.style!.fontSize, greaterThan(h3.style!.fontSize!));
-    });
-
-    testWidgets('inline markdown controller can render raw source mode', (
-      tester,
-    ) async {
-      final controller = InlineMarkdownEditingController(
-        text: 'See [[Roadmap]] and #planning',
-      )..livePreview = false;
-      await tester.pumpWidget(
-        _wrapWithMaterialApp(EditorPane(controller: controller)),
-      );
-
-      final textField = tester.widget<TextField>(find.byType(TextField));
-      final span = controller.buildTextSpan(
-        context: tester.element(find.byType(TextField)),
-        style: textField.style,
-        withComposing: false,
-      );
-
-      expect(span.text, equals(controller.text));
-      expect(span.children, isNull);
     });
 
     testWidgets('hides line-number column when showLineNumbers is false', (

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:graphite/core/design/colors.dart';
@@ -9,44 +11,38 @@ import 'package:graphite/core/design/typography.dart';
 class InlineMarkdownEditingController extends TextEditingController {
   InlineMarkdownEditingController({super.text});
 
-  bool _livePreview = true;
-
-  bool get livePreview => _livePreview;
-
-  set livePreview(bool value) {
-    if (_livePreview == value) return;
-    _livePreview = value;
-    notifyListeners();
-  }
-
   @override
   TextSpan buildTextSpan({
     required BuildContext context,
     TextStyle? style,
     required bool withComposing,
   }) {
-    if (!_livePreview) {
-      return super.buildTextSpan(
-        context: context,
-        style: style,
-        withComposing: withComposing,
-      );
-    }
-
     final colorScheme = Theme.of(context).colorScheme;
-    final baseStyle = style ?? GraphiteTypography.mono;
-    final tokenStyle = baseStyle.copyWith(
+    final sourceStyle = style ?? GraphiteTypography.mono;
+    final baseStyle = GraphiteTypography.body.copyWith(
+      color: colorScheme.onSurface,
+    );
+    final tokenStyle = sourceStyle.copyWith(
       color: colorScheme.onSurface.withValues(alpha: 0.45),
     );
-    final strongStyle = baseStyle.copyWith(
-      color: colorScheme.onSurface,
-      fontWeight: FontWeight.w700,
+    final strongStyle = baseStyle.copyWith(fontWeight: FontWeight.w700);
+    final emphasisStyle = baseStyle.copyWith(fontStyle: FontStyle.italic);
+    final strikeStyle = baseStyle.copyWith(
+      decoration: TextDecoration.lineThrough,
     );
-    final emphasisStyle = baseStyle.copyWith(
-      color: colorScheme.onSurface,
-      fontStyle: FontStyle.italic,
+    final highlightStyle = baseStyle.copyWith(
+      backgroundColor: colorScheme.tertiary.withValues(alpha: 0.18),
     );
-    final listMarkerStyle = baseStyle.copyWith(
+    final inlineCodeStyle = GraphiteTypography.mono.copyWith(
+      color: colorScheme.onSurface,
+      backgroundColor: colorScheme.surfaceContainerHighest.withValues(
+        alpha: 0.55,
+      ),
+    );
+    final codeBlockStyle = GraphiteTypography.mono.copyWith(
+      color: colorScheme.onSurface,
+    );
+    final listMarkerStyle = sourceStyle.copyWith(
       color: colorScheme.primary,
       fontWeight: FontWeight.w700,
     );
@@ -59,6 +55,15 @@ class InlineMarkdownEditingController extends TextEditingController {
     final tagStyle = baseStyle.copyWith(
       color: GraphiteColors.moss,
       fontWeight: FontWeight.w600,
+      backgroundColor: GraphiteColors.moss.withValues(alpha: 0.12),
+    );
+    final blockquoteStyle = baseStyle.copyWith(
+      color: colorScheme.onSurface.withValues(alpha: 0.78),
+      fontStyle: FontStyle.italic,
+    );
+    final checkedTaskStyle = baseStyle.copyWith(
+      color: colorScheme.onSurface.withValues(alpha: 0.64),
+      decoration: TextDecoration.lineThrough,
     );
     final headingStyles = List<TextStyle>.generate(
       6,
@@ -66,41 +71,66 @@ class InlineMarkdownEditingController extends TextEditingController {
     );
 
     final children = <InlineSpan>[];
-    final source = text;
-    final lines = source.split('\n');
+    final lines = text.split('\n');
+    var inCodeFence = false;
 
     for (var i = 0; i < lines.length; i++) {
       if (i > 0) {
-        children.add(TextSpan(text: '\n', style: baseStyle));
+        children.add(TextSpan(text: '\n', style: sourceStyle));
       }
+
+      final line = lines[i];
+      if (_isFenceLine(line)) {
+        children.add(TextSpan(text: line, style: tokenStyle));
+        inCodeFence = !inCodeFence;
+        continue;
+      }
+
+      if (inCodeFence) {
+        children.add(TextSpan(text: line, style: codeBlockStyle));
+        continue;
+      }
+
       _appendDecoratedLine(
         children,
-        lines[i],
+        line,
         baseStyle,
+        sourceStyle,
         tokenStyle,
         strongStyle,
         emphasisStyle,
+        strikeStyle,
+        highlightStyle,
+        inlineCodeStyle,
         headingStyles,
         listMarkerStyle,
         linkStyle,
         tagStyle,
+        blockquoteStyle,
+        checkedTaskStyle,
       );
     }
 
-    return TextSpan(style: baseStyle, children: children);
+    return TextSpan(style: sourceStyle, children: children);
   }
 
   static void _appendDecoratedLine(
     List<InlineSpan> children,
     String line,
     TextStyle baseStyle,
+    TextStyle sourceStyle,
     TextStyle tokenStyle,
     TextStyle strongStyle,
     TextStyle emphasisStyle,
+    TextStyle strikeStyle,
+    TextStyle highlightStyle,
+    TextStyle inlineCodeStyle,
     List<TextStyle> headingStyles,
     TextStyle listMarkerStyle,
     TextStyle linkStyle,
     TextStyle tagStyle,
+    TextStyle blockquoteStyle,
+    TextStyle checkedTaskStyle,
   ) {
     if (line.isEmpty) return;
 
@@ -110,16 +140,45 @@ class InlineMarkdownEditingController extends TextEditingController {
 
     if (headingMatch != null) {
       children.add(TextSpan(text: headingMatch[1], style: tokenStyle));
-      children.add(TextSpan(text: headingMatch[2], style: baseStyle));
+      children.add(TextSpan(text: headingMatch[2], style: sourceStyle));
       start = headingMatch.end;
       lineBaseStyle = headingStyles[headingMatch[1]!.length - 1];
     } else {
-      final listMatch = RegExp(r'^(\s*)([-*+]|\d+\.)(\s+)').firstMatch(line);
-      if (listMatch != null) {
-        children.add(TextSpan(text: listMatch[1], style: baseStyle));
-        children.add(TextSpan(text: listMatch[2], style: listMarkerStyle));
-        children.add(TextSpan(text: listMatch[3], style: baseStyle));
-        start = listMatch.end;
+      final quoteMatch = RegExp(r'^(\s*>+\s?)').firstMatch(line);
+      if (quoteMatch != null) {
+        children.add(TextSpan(text: quoteMatch[1], style: tokenStyle));
+        start = quoteMatch.end;
+        lineBaseStyle = blockquoteStyle;
+      } else {
+        final ruleMatch = RegExp(
+          r'^\s{0,3}((?:[-*_]\s*){3,})$',
+        ).firstMatch(line);
+        if (ruleMatch != null) {
+          children.add(TextSpan(text: line, style: tokenStyle));
+          return;
+        }
+
+        final listMatch = RegExp(
+          r'^(\s*)([-*+]|\d+[.)])(\s+)(\[[ xX]\])?(\s*)',
+        ).firstMatch(line);
+        if (listMatch != null) {
+          children.add(TextSpan(text: listMatch[1], style: sourceStyle));
+          children.add(TextSpan(text: listMatch[2], style: listMarkerStyle));
+          children.add(TextSpan(text: listMatch[3], style: sourceStyle));
+          final taskMarker = listMatch[4];
+          if (taskMarker != null) {
+            final checked = taskMarker.toLowerCase() == '[x]';
+            children.add(
+              TextSpan(
+                text: taskMarker,
+                style: checked ? listMarkerStyle : tokenStyle,
+              ),
+            );
+            children.add(TextSpan(text: listMatch[5], style: sourceStyle));
+            lineBaseStyle = checked ? checkedTaskStyle : baseStyle;
+          }
+          start = listMatch.end;
+        }
       }
     }
 
@@ -130,6 +189,9 @@ class InlineMarkdownEditingController extends TextEditingController {
       tokenStyle,
       strongStyle,
       emphasisStyle,
+      strikeStyle,
+      highlightStyle,
+      inlineCodeStyle,
       linkStyle,
       tagStyle,
     );
@@ -142,11 +204,14 @@ class InlineMarkdownEditingController extends TextEditingController {
     TextStyle tokenStyle,
     TextStyle strongStyle,
     TextStyle emphasisStyle,
+    TextStyle strikeStyle,
+    TextStyle highlightStyle,
+    TextStyle inlineCodeStyle,
     TextStyle linkStyle,
     TextStyle tagStyle,
   ) {
     final pattern = RegExp(
-      r'(\[\[[^\]\n]+\]\])|(\*\*[^*\n]+?\*\*)|(?<!\*)\*[^*\n]+?\*(?!\*)|(?<!\w)#[a-zA-Z0-9_-]+',
+      r'(`[^`\n]+?`)|(\[\[[^\]\n]+\]\])|(\[[^\]\n]+?\]\([^) \n]+?\))|(\*\*[^*\n]+?\*\*)|(__[^_\n]+?__)|(?<!\*)\*[^*\n]+?\*(?!\*)|(?<!\w)_[^_\n]+?_(?!\w)|(~~[^~\n]+?~~)|(==[^=\n]+?==)|(?<!\w)#[a-zA-Z0-9_-]+',
     );
     var cursor = 0;
 
@@ -158,7 +223,16 @@ class InlineMarkdownEditingController extends TextEditingController {
       }
 
       final token = match[0]!;
-      if (token.startsWith('[[')) {
+      if (token.startsWith('`')) {
+        children.add(TextSpan(text: '`', style: tokenStyle));
+        children.add(
+          TextSpan(
+            text: token.substring(1, token.length - 1),
+            style: inlineCodeStyle,
+          ),
+        );
+        children.add(TextSpan(text: '`', style: tokenStyle));
+      } else if (token.startsWith('[[')) {
         children.add(TextSpan(text: '[[', style: tokenStyle));
         children.add(
           TextSpan(
@@ -167,24 +241,53 @@ class InlineMarkdownEditingController extends TextEditingController {
           ),
         );
         children.add(TextSpan(text: ']]', style: tokenStyle));
-      } else if (token.startsWith('**')) {
-        children.add(TextSpan(text: '**', style: tokenStyle));
+      } else if (token.startsWith('[')) {
+        final closeLabel = token.indexOf(']');
+        children.add(TextSpan(text: '[', style: tokenStyle));
+        children.add(
+          TextSpan(text: token.substring(1, closeLabel), style: linkStyle),
+        );
+        children.add(
+          TextSpan(text: token.substring(closeLabel), style: tokenStyle),
+        );
+      } else if (token.startsWith('**') || token.startsWith('__')) {
+        final marker = token.substring(0, 2);
+        children.add(TextSpan(text: marker, style: tokenStyle));
         children.add(
           TextSpan(
             text: token.substring(2, token.length - 2),
             style: strongStyle,
           ),
         );
-        children.add(TextSpan(text: '**', style: tokenStyle));
-      } else if (token.startsWith('*')) {
-        children.add(TextSpan(text: '*', style: tokenStyle));
+        children.add(TextSpan(text: marker, style: tokenStyle));
+      } else if (token.startsWith('*') || token.startsWith('_')) {
+        final marker = token[0];
+        children.add(TextSpan(text: marker, style: tokenStyle));
         children.add(
           TextSpan(
             text: token.substring(1, token.length - 1),
             style: emphasisStyle,
           ),
         );
-        children.add(TextSpan(text: '*', style: tokenStyle));
+        children.add(TextSpan(text: marker, style: tokenStyle));
+      } else if (token.startsWith('~~')) {
+        children.add(TextSpan(text: '~~', style: tokenStyle));
+        children.add(
+          TextSpan(
+            text: token.substring(2, token.length - 2),
+            style: strikeStyle,
+          ),
+        );
+        children.add(TextSpan(text: '~~', style: tokenStyle));
+      } else if (token.startsWith('==')) {
+        children.add(TextSpan(text: '==', style: tokenStyle));
+        children.add(
+          TextSpan(
+            text: token.substring(2, token.length - 2),
+            style: highlightStyle,
+          ),
+        );
+        children.add(TextSpan(text: '==', style: tokenStyle));
       } else {
         children.add(TextSpan(text: token, style: tagStyle));
       }
@@ -195,6 +298,10 @@ class InlineMarkdownEditingController extends TextEditingController {
     if (cursor < text.length) {
       children.add(TextSpan(text: text.substring(cursor), style: baseStyle));
     }
+  }
+
+  static bool _isFenceLine(String line) {
+    return RegExp(r'^\s*(```+|~~~+)').hasMatch(line);
   }
 
   static TextStyle _markdownHeadingStyle(Color color, int level) {
@@ -236,17 +343,31 @@ class _EditorPaneState extends State<EditorPane> {
   final List<String> _undoStack = [];
   final List<String> _redoStack = [];
   bool _wasFocusedOnTapDown = false;
+  Timer? _undoDebounceTimer;
+  String? _lastUndoState;
 
   @override
   void dispose() {
     _focusNode.dispose();
     _scrollController.dispose();
+    _undoDebounceTimer?.cancel();
     super.dispose();
   }
 
   void _pushUndoState() {
     _undoStack.add(widget.controller.text);
     _redoStack.clear();
+    _lastUndoState = widget.controller.text;
+  }
+
+  void _scheduleUndoState() {
+    _undoDebounceTimer?.cancel();
+    _undoDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      // Only push if text actually changed since last undo state
+      if (_lastUndoState != widget.controller.text) {
+        _pushUndoState();
+      }
+    });
   }
 
   void _insertMarkup(String prefix, String suffix) {
@@ -333,17 +454,27 @@ class _EditorPaneState extends State<EditorPane> {
 
   void _undo() {
     if (_undoStack.isEmpty) return;
+    _undoDebounceTimer?.cancel();
     _redoStack.add(widget.controller.text);
     final previous = _undoStack.removeLast();
-    widget.controller.text = previous;
+    widget.controller.value = TextEditingValue(
+      text: previous,
+      selection: TextSelection.collapsed(offset: previous.length),
+    );
+    _lastUndoState = previous;
     widget.onChanged?.call(previous);
   }
 
   void _redo() {
     if (_redoStack.isEmpty) return;
+    _undoDebounceTimer?.cancel();
     _undoStack.add(widget.controller.text);
     final next = _redoStack.removeLast();
-    widget.controller.text = next;
+    widget.controller.value = TextEditingValue(
+      text: next,
+      selection: TextSelection.collapsed(offset: next.length),
+    );
+    _lastUndoState = next;
     widget.onChanged?.call(next);
   }
 
@@ -373,7 +504,10 @@ class _EditorPaneState extends State<EditorPane> {
                     controller: widget.controller,
                     focusNode: _focusNode,
                     scrollController: _scrollController,
-                    onChanged: widget.onChanged,
+                    onChanged: (text) {
+                      _scheduleUndoState();
+                      widget.onChanged?.call(text);
+                    },
                     style: GraphiteTypography.mono.copyWith(
                       color: colorScheme.onSurface,
                     ),

@@ -164,47 +164,6 @@ void main() {
         );
       },
     );
-
-    testWidgets('source mode switches to raw markdown editing', (tester) async {
-      final noteId = createNote();
-
-      await tester.pumpWidget(
-        wrap(
-          EditorScreen(
-            noteId: noteId,
-            saveNoteUseCase: saveNoteUseCase,
-            navigateLinkUseCase: navigateLinkUseCase,
-          ),
-        ),
-      );
-      await pumpUntilSettled(tester);
-
-      var textField = tester.widget<TextField>(
-        find.descendant(
-          of: find.byType(EditorPane),
-          matching: find.byType(TextField),
-        ),
-      );
-      expect(
-        (textField.controller! as InlineMarkdownEditingController).livePreview,
-        isTrue,
-      );
-
-      await tester.tap(find.byTooltip('Source mode'));
-      await tester.pump();
-
-      textField = tester.widget<TextField>(
-        find.descendant(
-          of: find.byType(EditorPane),
-          matching: find.byType(TextField),
-        ),
-      );
-      expect(find.byTooltip('Live preview'), findsOneWidget);
-      expect(
-        (textField.controller! as InlineMarkdownEditingController).livePreview,
-        isFalse,
-      );
-    });
   });
 
   // ── Typing and preview ─────────────────────────────────────────────
