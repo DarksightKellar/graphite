@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 
 import 'package:graphite/core/data/database.dart';
 import 'package:graphite/core/repository/note_repository.dart';
+import 'package:graphite/core/theme/app_theme_service.dart';
 import 'package:graphite/features/editor/usecases/navigate_link_use_case.dart';
 import 'package:graphite/features/editor/usecases/save_note_use_case.dart';
 import 'package:graphite/features/home/usecases/delete_note_use_case.dart';
@@ -17,24 +18,15 @@ void configureDependencies() {
   getIt.registerLazySingleton<GraphiteDB>(() => GraphiteDB());
 
   // ── Repository ──────────────────────────────────────────────────────
-  getIt.registerLazySingleton<NoteRepository>(
-    () => NoteRepository(getIt<GraphiteDB>()),
-  );
+  getIt.registerLazySingleton<NoteRepository>(() => NoteRepository(getIt<GraphiteDB>()));
 
   // ── Use cases (stateless — new instance per request) ────────────────
-  getIt.registerFactory<NoteListUseCase>(
-    () => NoteListUseCase(getIt<NoteRepository>()),
-  );
-  getIt.registerFactory<QuickNoteUseCase>(
-    () => QuickNoteUseCase(getIt<NoteRepository>()),
-  );
-  getIt.registerFactory<DeleteNoteUseCase>(
-    () => DeleteNoteUseCase(getIt<NoteRepository>()),
-  );
-  getIt.registerFactory<SaveNoteUseCase>(
-    () => SaveNoteUseCase(getIt<NoteRepository>()),
-  );
-  getIt.registerFactory<NavigateLinkUseCase>(
-    () => NavigateLinkUseCase(getIt<NoteRepository>()),
-  );
+  getIt.registerFactory<NoteListUseCase>(() => NoteListUseCase(getIt<NoteRepository>()));
+  getIt.registerFactory<QuickNoteUseCase>(() => QuickNoteUseCase(getIt<NoteRepository>()));
+  getIt.registerFactory<DeleteNoteUseCase>(() => DeleteNoteUseCase(getIt<NoteRepository>()));
+  getIt.registerFactory<SaveNoteUseCase>(() => SaveNoteUseCase(getIt<NoteRepository>()));
+  getIt.registerFactory<NavigateLinkUseCase>(() => NavigateLinkUseCase(getIt<NoteRepository>()));
+
+  // ── App state / theme control ──────────────────────────────────────
+  getIt.registerLazySingleton<AppThemeService>(() => AppThemeService());
 }

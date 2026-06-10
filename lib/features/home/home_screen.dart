@@ -3,6 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:graphite/core/di/injection.dart';
+import 'package:graphite/core/design/spacing.dart';
+import 'package:graphite/core/design/typography.dart';
+import 'package:graphite/core/models/note.dart';
+import 'package:graphite/core/models/tag.dart';
+import 'package:graphite/core/theme/app_theme_service.dart';
 import 'package:graphite/features/home/usecases/delete_note_use_case.dart';
 import 'package:graphite/features/home/usecases/note_list_use_case.dart';
 import 'package:graphite/features/home/usecases/quick_note_use_case.dart';
@@ -10,10 +16,7 @@ import 'package:graphite/features/home/widgets/home_note_card.dart';
 import 'package:graphite/features/home/widgets/home_search_bar.dart';
 import 'package:graphite/features/home/widgets/home_tag_filter_bar.dart';
 import 'package:graphite/features/home/widgets/quick_capture_dialog.dart';
-import 'package:graphite/core/design/spacing.dart';
-import 'package:graphite/core/design/typography.dart';
-import 'package:graphite/core/models/note.dart';
-import 'package:graphite/core/models/tag.dart';
+import 'package:graphite/features/home/widgets/theme_mode_menu_button.dart';
 
 /// Sort order for the note list.
 enum NoteSortOrder { dateModified, dateCreated, titleAsc, titleDesc }
@@ -262,6 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildHomeHeader(context),
             HomeSearchBar(
               controller: _searchController,
               query: _searchQuery,
@@ -448,6 +452,26 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       debugPrint('Failed to filter by tag: $e');
     }
+  }
+
+  Widget _buildHomeHeader(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Graphite',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, color: colorScheme.onSurface),
+          ),
+          ThemeModeMenuButton(themeService: getIt<AppThemeService>()),
+        ],
+      ),
+    );
   }
 
   void _showQuickCapture() {
