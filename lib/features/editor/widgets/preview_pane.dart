@@ -90,19 +90,20 @@ class PreviewPane extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(44, 44, 44, 32),
         data: content,
         selectable: true,
+        softLineBreak: true,
         styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
           h1: GraphiteTypography.markdownH1.copyWith(
             color: colorScheme.onSurface,
           ),
-          h1Padding: const EdgeInsets.only(bottom: GraphiteSpacing.lg),
+          h1Padding: const EdgeInsets.only(bottom: GraphiteSpacing.xs),
           h2: GraphiteTypography.markdownH2.copyWith(
             color: colorScheme.onSurface,
           ),
-          h2Padding: const EdgeInsets.only(bottom: GraphiteSpacing.md),
+          h2Padding: const EdgeInsets.only(bottom: GraphiteSpacing.xs),
           h3: GraphiteTypography.markdownH3.copyWith(
             color: colorScheme.onSurface,
           ),
-          h3Padding: const EdgeInsets.only(bottom: GraphiteSpacing.sm),
+          h3Padding: const EdgeInsets.only(bottom: GraphiteSpacing.xs),
           h4: GraphiteTypography.markdownH4.copyWith(
             color: colorScheme.onSurface,
           ),
@@ -116,7 +117,7 @@ class PreviewPane extends StatelessWidget {
           listBullet: GraphiteTypography.body.copyWith(
             color: colorScheme.onSurface,
           ),
-          blockSpacing: GraphiteSpacing.lg,
+          blockSpacing: GraphiteSpacing.sm,
         ),
         builders: {
           'wikilink': _WikiLinkBuilder(onTap: onLinkTap),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:graphite/core/design/spacing.dart';
 import 'package:graphite/core/design/typography.dart';
 import 'package:graphite/features/editor/widgets/preview_pane.dart';
 
@@ -61,6 +62,31 @@ void main() {
       expect(styleSheet.h2!.fontSize, greaterThan(styleSheet.h3!.fontSize!));
     });
 
+    testWidgets('uses compact vertical spacing between markdown blocks', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(const PreviewPane(content: '# Title\n\nParagraph\n\n## Section')),
+      );
+
+      final markdown = tester.widget<Markdown>(find.byType(Markdown));
+      final styleSheet = markdown.styleSheet!;
+
+      expect(styleSheet.blockSpacing, GraphiteSpacing.sm);
+      expect(
+        styleSheet.h1Padding,
+        const EdgeInsets.only(bottom: GraphiteSpacing.xs),
+      );
+      expect(
+        styleSheet.h2Padding,
+        const EdgeInsets.only(bottom: GraphiteSpacing.xs),
+      );
+      expect(
+        styleSheet.h3Padding,
+        const EdgeInsets.only(bottom: GraphiteSpacing.xs),
+      );
+    });
+
     testWidgets('renders bold via Markdown widget', (tester) async {
       await tester.pumpWidget(
         wrap(const PreviewPane(content: 'This is **bold** text.')),
@@ -91,6 +117,16 @@ void main() {
       );
 
       expect(find.byType(Markdown), findsOneWidget);
+    });
+
+    testWidgets('renders editor newlines as visible soft line breaks', (
+      tester,
+    ) async {
+      await tester.pumpWidget(wrap(const PreviewPane(content: 'hello\nworld')));
+
+      final markdown = tester.widget<Markdown>(find.byType(Markdown));
+
+      expect(markdown.softLineBreak, isTrue);
     });
 
     testWidgets('renders multiple wiki-links', (tester) async {
